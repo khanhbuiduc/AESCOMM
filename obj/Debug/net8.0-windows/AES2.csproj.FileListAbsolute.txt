@@ -1,0 +1,14 @@
+C:\Users\HP PC\Desktop\AES2\bin\Debug\net8.0-windows\AES2.exe
+C:\Users\HP PC\Desktop\AES2\bin\Debug\net8.0-windows\AES2.deps.json
+C:\Users\HP PC\Desktop\AES2\bin\Debug\net8.0-windows\AES2.runtimeconfig.json
+C:\Users\HP PC\Desktop\AES2\bin\Debug\net8.0-windows\AES2.dll
+C:\Users\HP PC\Desktop\AES2\bin\Debug\net8.0-windows\AES2.pdb
+C:\Users\HP PC\Desktop\AES2\obj\Debug\net8.0-windows\AES2.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\HP PC\Desktop\AES2\obj\Debug\net8.0-windows\AES2.AssemblyInfoInputs.cache
+C:\Users\HP PC\Desktop\AES2\obj\Debug\net8.0-windows\AES2.AssemblyInfo.cs
+C:\Users\HP PC\Desktop\AES2\obj\Debug\net8.0-windows\AES2.csproj.CoreCompileInputs.cache
+C:\Users\HP PC\Desktop\AES2\obj\Debug\net8.0-windows\AES2.dll
+C:\Users\HP PC\Desktop\AES2\obj\Debug\net8.0-windows\refint\AES2.dll
+C:\Users\HP PC\Desktop\AES2\obj\Debug\net8.0-windows\AES2.pdb
+C:\Users\HP PC\Desktop\AES2\obj\Debug\net8.0-windows\AES2.genruntimeconfig.cache
+C:\Users\HP PC\Desktop\AES2\obj\Debug\net8.0-windows\ref\AES2.dll
