@@ -10,6 +10,8 @@ public partial class Form1 : Form
     private bool isListening = false;
     private CancellationTokenSource? cts;
     private uint[] encryptionKey; // Store encryption key
+    private readonly string downloadPath;
+    private string selectedFilePath = string.Empty;
 
     public Form1()
     {
@@ -17,12 +19,41 @@ public partial class Form1 : Form
         btnListen.Click += BtnListen_Click;
         btnSend.Click += BtnSend_Click;
 
+        // Add button for file selection
+        Button btnSelectFile = new Button
+        {
+            Text = "Select File",
+            Location = new Point(470, 16),
+            Size = new Size(94, 29)
+        };
+        btnSelectFile.Click += BtnSelectFile_Click;
+        tabPage2.Controls.Add(btnSelectFile);
+
         // Generate random key for AES-256
         encryptionKey = new uint[]
         {
             0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f,
             0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f
         };
+
+        // Create download directory
+        downloadPath = Path.Combine(Application.StartupPath, "Downloads");
+        Directory.CreateDirectory(downloadPath);
+    }
+
+    private void BtnSelectFile_Click(object? sender, EventArgs e)
+    {
+        using (OpenFileDialog openFileDialog = new OpenFileDialog())
+        {
+            openFileDialog.Filter = "All files (*.*)|*.*";
+            openFileDialog.FilterIndex = 1;
+
+            if (openFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                selectedFilePath = openFileDialog.FileName;
+                txtMessage.Text = $"Selected file: {Path.GetFileName(selectedFilePath)}";
+            }
+        }
     }
 
     private async void BtnListen_Click(object? sender, EventArgs e)
@@ -82,39 +113,75 @@ public partial class Form1 : Form
                 // Read total size first
                 byte[] sizeBuffer = new byte[4];
                 await stream.ReadAsync(sizeBuffer, 0, 4);
-                int totalSize = BitConverter.ToInt32(sizeBuffer, 0);
+                int totalSize = BitConverter.ToInt32(sizeBuffer);
 
-                // Read encrypted data
+                // Read data
                 byte[] buffer = new byte[totalSize];
                 int bytesRead = 0;
                 while (bytesRead < totalSize)
                 {
                     int read = await stream.ReadAsync(buffer, bytesRead, totalSize - bytesRead);
+                    if (read == 0) break;
                     bytesRead += read;
                 }
 
-                // Convert to uint arrays (blocks)
-                uint[][] encryptedBlocks = new uint[totalSize / 16][];
-                for (int i = 0; i < encryptedBlocks.Length; i++)
+                // Check if it's a file
+                bool isFile = buffer[0] == 1;
+
+                if (isFile)
                 {
-                    encryptedBlocks[i] = new uint[4];
-                    Buffer.BlockCopy(buffer, i * 16, encryptedBlocks[i], 0, 16);
+                    // Read file name length and file name
+                    int fileNameLength = BitConverter.ToInt32(buffer, 1);
+                    string fileName = Encoding.UTF8.GetString(buffer, 5, fileNameLength);
+
+                    // Get encrypted blocks
+                    int encryptedDataStart = 5 + fileNameLength;
+                    int encryptedDataLength = totalSize - encryptedDataStart;
+                    uint[][] encryptedBlocks = new uint[encryptedDataLength / 16][];
+
+                    for (int i = 0; i < encryptedBlocks.Length; i++)
+                    {
+                        encryptedBlocks[i] = new uint[4];
+                        Buffer.BlockCopy(buffer, encryptedDataStart + (i * 16), encryptedBlocks[i], 0, 16);
+                    }
+
+                    // Decrypt data
+                    string base64Content = Aes256Helper.DecryptCBC(encryptedBlocks, encryptionKey);
+                    byte[] fileContent = Convert.FromBase64String(base64Content);
+
+                    // Save file
+                    string savePath = Path.Combine(downloadPath, fileName);
+                    await File.WriteAllBytesAsync(savePath, fileContent);
+
+                    this.Invoke(() =>
+                    {
+                        txtReceived.AppendText($"{DateTime.Now}: Received and saved file: {savePath}{Environment.NewLine}");
+                    });
                 }
-
-                // Decrypt using CBC mode
-                string message = Aes256Helper.DecryptCBC(encryptedBlocks, encryptionKey);
-
-                this.Invoke(() =>
+                else
                 {
-                    txtReceived.AppendText($"{DateTime.Now}: {message}{Environment.NewLine}");
-                });
+                    // Handle regular message
+                    uint[][] encryptedBlocks = new uint[totalSize / 16][];
+                    for (int i = 0; i < encryptedBlocks.Length; i++)
+                    {
+                        encryptedBlocks[i] = new uint[4];
+                        Buffer.BlockCopy(buffer, 1 + (i * 16), encryptedBlocks[i], 0, 16);
+                    }
+
+                    string message = Aes256Helper.DecryptCBC(encryptedBlocks, encryptionKey);
+
+                    this.Invoke(() =>
+                    {
+                        txtReceived.AppendText($"{DateTime.Now}: {message}{Environment.NewLine}");
+                    });
+                }
             }
         }
         catch (Exception ex)
         {
             this.Invoke(() =>
             {
-                MessageBox.Show($"Error handling client: {ex.Message}");
+                MessageBox.Show($"Error handling received data: {ex.Message}");
             });
         }
     }
@@ -133,36 +200,90 @@ public partial class Form1 : Form
         {
             string host = txtHost.Text;
             int port = int.Parse(txtSendPort.Text);
-            string message = txtMessage.Text;
+
+            string message;
+            byte[] fileNameBytes = Array.Empty<byte>();
+            byte[] fileContentBytes = Array.Empty<byte>();
+
+            if (!string.IsNullOrEmpty(selectedFilePath) && File.Exists(selectedFilePath))
+            {
+                // Prepare file data
+                string fileName = Path.GetFileName(selectedFilePath);
+                fileNameBytes = Encoding.UTF8.GetBytes(fileName);
+                fileContentBytes = await File.ReadAllBytesAsync(selectedFilePath);
+                message = Convert.ToBase64String(fileContentBytes);
+            }
+            else
+            {
+                message = txtMessage.Text;
+            }
 
             // Generate IV and encrypt using CBC mode
             uint[] iv = Aes256Helper.GenerateIV();
             uint[][] encryptedBlocks = Aes256Helper.EncryptCBC(message, encryptionKey, iv);
-
-            // Convert all blocks to single byte array
-            byte[] dataToSend = new byte[encryptedBlocks.Length * 16];
-            for (int i = 0; i < encryptedBlocks.Length; i++)
-            {
-                Buffer.BlockCopy(encryptedBlocks[i], 0, dataToSend, i * 16, 16);
-            }
 
             using (TcpClient client = new TcpClient())
             {
                 await client.ConnectAsync(host, port);
                 using (NetworkStream stream = client.GetStream())
                 {
-                    // Send total size first
-                    await stream.WriteAsync(BitConverter.GetBytes(dataToSend.Length));
-                    // Send encrypted data
+                    // Prepare the full message
+                    byte[] dataToSend;
+                    if (!string.IsNullOrEmpty(selectedFilePath))
+                    {
+                        // Format: [IsFile(1)][FileNameLength(4)][FileName(var)][EncryptedData]
+                        int totalLength = 1 + 4 + fileNameBytes.Length + (encryptedBlocks.Length * 16);
+                        dataToSend = new byte[4 + totalLength]; // Total length prefix
+
+                        using (var ms = new MemoryStream(dataToSend))
+                        using (var writer = new BinaryWriter(ms))
+                        {
+                            writer.Write(totalLength);
+                            writer.Write((byte)1); // IsFile flag
+                            writer.Write(fileNameBytes.Length);
+                            writer.Write(fileNameBytes);
+
+                            // Write encrypted blocks
+                            for (int i = 0; i < encryptedBlocks.Length; i++)
+                            {
+                                byte[] blockBytes = new byte[16];
+                                Buffer.BlockCopy(encryptedBlocks[i], 0, blockBytes, 0, 16);
+                                writer.Write(blockBytes);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        // Format: [IsFile(1)][EncryptedData]
+                        int totalLength = 1 + (encryptedBlocks.Length * 16);
+                        dataToSend = new byte[4 + totalLength]; // Total length prefix
+
+                        using (var ms = new MemoryStream(dataToSend))
+                        using (var writer = new BinaryWriter(ms))
+                        {
+                            writer.Write(totalLength);
+                            writer.Write((byte)0); // IsFile flag
+
+                            // Write encrypted blocks
+                            for (int i = 0; i < encryptedBlocks.Length; i++)
+                            {
+                                byte[] blockBytes = new byte[16];
+                                Buffer.BlockCopy(encryptedBlocks[i], 0, blockBytes, 0, 16);
+                                writer.Write(blockBytes);
+                            }
+                        }
+                    }
+
                     await stream.WriteAsync(dataToSend);
                 }
             }
 
-            MessageBox.Show("Encrypted message sent successfully!");
+            MessageBox.Show("Data sent successfully!");
+            selectedFilePath = string.Empty; // Reset selected file
         }
         catch (Exception ex)
         {
-            MessageBox.Show($"Error sending message: {ex.Message}");
+            MessageBox.Show($"Error sending data: {ex.Message}");
         }
     }
 
