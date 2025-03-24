@@ -103,6 +103,26 @@ public partial class Form1 : Form
         }
     }
 
+    private string GetUniqueFilePath(string basePath)
+    {
+        if (!File.Exists(basePath))
+            return basePath;
+
+        string folder = Path.GetDirectoryName(basePath);
+        string fileName = Path.GetFileNameWithoutExtension(basePath);
+        string extension = Path.GetExtension(basePath);
+        int counter = 1;
+
+        string newPath;
+        do
+        {
+            newPath = Path.Combine(folder, $"{fileName}({counter}){extension}");
+            counter++;
+        } while (File.Exists(newPath));
+
+        return newPath;
+    }
+
     private async Task HandleClientAsync(TcpClient client)
     {
         try
@@ -149,8 +169,9 @@ public partial class Form1 : Form
                     string base64Content = Aes256Helper.DecryptCBC(encryptedBlocks, encryptionKey);
                     byte[] fileContent = Convert.FromBase64String(base64Content);
 
-                    // Save file
-                    string savePath = Path.Combine(downloadPath, fileName);
+                    // Save file with unique name
+                    string basePath = Path.Combine(downloadPath, fileName);
+                    string savePath = GetUniqueFilePath(basePath);
                     await File.WriteAllBytesAsync(savePath, fileContent);
 
                     this.Invoke(() =>
@@ -194,6 +215,16 @@ public partial class Form1 : Form
         tcpListener = null;
     }
 
+    private string GetUniqueFileName(string originalFileName)
+    {
+        string directory = Path.GetDirectoryName(originalFileName);
+        string fileName = Path.GetFileNameWithoutExtension(originalFileName);
+        string extension = Path.GetExtension(originalFileName);
+        string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss");
+
+        return Path.Combine(directory, $"{fileName}_{timestamp}{extension}");
+    }
+
     private async void BtnSend_Click(object? sender, EventArgs e)
     {
         try
@@ -207,8 +238,9 @@ public partial class Form1 : Form
 
             if (!string.IsNullOrEmpty(selectedFilePath) && File.Exists(selectedFilePath))
             {
-                // Prepare file data
-                string fileName = Path.GetFileName(selectedFilePath);
+                // Create unique file name with timestamp
+                string uniqueFileName = GetUniqueFileName(selectedFilePath);
+                string fileName = Path.GetFileName(uniqueFileName);
                 fileNameBytes = Encoding.UTF8.GetBytes(fileName);
                 fileContentBytes = await File.ReadAllBytesAsync(selectedFilePath);
                 message = Convert.ToBase64String(fileContentBytes);
