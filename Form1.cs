@@ -458,23 +458,9 @@ public partial class Form1 : Form
             if (File.Exists(historyPath))
             {
                 string history = File.ReadAllText(historyPath);
-                using (var form = new Form())
+                using (var historyForm = new HistoryForm(history))
                 {
-                    form.Text = "Download History";
-                    form.Size = new Size(600, 400);
-
-                    var textBox = new TextBox
-                    {
-                        Multiline = true,
-                        ReadOnly = true,
-                        Dock = DockStyle.Fill,
-                        ScrollBars = ScrollBars.Both,
-                        Text = history,
-                        Font = new Font("Consolas", 10)
-                    };
-
-                    form.Controls.Add(textBox);
-                    form.ShowDialog();
+                    historyForm.ShowDialog(this);
                 }
             }
             else
