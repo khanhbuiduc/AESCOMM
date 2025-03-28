@@ -33,6 +33,7 @@ partial class Form1
         lblHistory = new Label();
         logoPictureBox = new PictureBox();
         listenPanel = new Panel();
+        lblDeviceName = new Label();
         tabPage2 = new TabPage();
         txtMessage = new TextBox();
         btnSend = new Button();
@@ -62,6 +63,7 @@ partial class Form1
         tabPage1.Controls.Add(lblHistory);
         tabPage1.Controls.Add(logoPictureBox);
         tabPage1.Controls.Add(listenPanel);
+        tabPage1.Controls.Add(lblDeviceName);
         tabPage1.Location = new Point(4, 24);
         tabPage1.Margin = new Padding(3, 2, 3, 2);
         tabPage1.Name = "tabPage1";
@@ -92,7 +94,7 @@ partial class Form1
         logoPictureBox.ErrorImage = Properties.Resources.security_aes;
         logoPictureBox.Location = new Point(377, 20);
         logoPictureBox.Name = "logoPictureBox";
-        logoPictureBox.Size = new Size(250, 250);
+        logoPictureBox.Size = new Size(277, 192);
         logoPictureBox.SizeMode = PictureBoxSizeMode.Zoom;
         logoPictureBox.TabIndex = 0;
         logoPictureBox.TabStop = false;
@@ -103,6 +105,20 @@ partial class Form1
         listenPanel.Name = "listenPanel";
         listenPanel.Size = new Size(200, 100);
         listenPanel.TabIndex = 0;
+        // 
+        // lblDeviceName
+        // 
+        lblDeviceName.Cursor = Cursors.Hand;
+        lblDeviceName.ForeColor = Color.RoyalBlue;
+        lblDeviceName.BackColor = Color.Transparent;
+        lblDeviceName.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
+        lblDeviceName.TextAlign = ContentAlignment.MiddleCenter;
+        lblDeviceName.Location = new Point(377, 234);
+        lblDeviceName.Name = "lblDeviceName";
+        lblDeviceName.Size = new Size(277, 49);
+        lblDeviceName.TabIndex = 2;
+        lblDeviceName.Text = "Device name";
+        lblDeviceName.TextAlign = ContentAlignment.MiddleCenter;
         // 
         // tabPage2
         // 
@@ -194,6 +210,7 @@ partial class Form1
     private Button btnSelectFile;
     private PictureBox logoPictureBox;
     private Label lblHistory;
+    private Label lblDeviceName;
 
     #endregion
 

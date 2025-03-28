@@ -13,11 +13,16 @@ public partial class Form1 : Form
     private uint[] encryptionKey; // Store encryption key
     private readonly string downloadPath;
     private string selectedFilePath = string.Empty;
+    private string randomName;
 
     public Form1()
     {
         InitializeComponent();
         btnSend.Click += BtnSend_Click;
+        lblDeviceName.Click += LblDeviceName_Click;
+
+        // Load saved name or generate a new one
+        LoadSavedName();
 
         // Load logo
         try
@@ -44,6 +49,62 @@ public partial class Form1 : Form
         downloadPath = Path.Combine(Application.StartupPath, "Downloads");
         Directory.CreateDirectory(downloadPath);
         StartListening();
+    }
+
+    private void GenerateRandomName()
+    {
+        try
+        {
+            string jsonPath = Path.Combine(Application.StartupPath, "name_random.json");
+            string nameConfigPath = Path.Combine(Application.StartupPath, "saved_name.txt");
+
+            // Read and parse JSON
+            string jsonContent = File.ReadAllText(jsonPath);
+            var jsonDoc = System.Text.Json.JsonDocument.Parse(jsonContent);
+            var adjectives = jsonDoc.RootElement.GetProperty("adjectives").EnumerateArray()
+                                  .Select(e => e.GetString()).ToList();
+            var nouns = jsonDoc.RootElement.GetProperty("nouns").EnumerateArray()
+                             .Select(e => e.GetString()).ToList();
+
+            // Generate random name
+            var random = new Random();
+            string adj = adjectives[random.Next(adjectives.Count)];
+            string noun = nouns[random.Next(nouns.Count)];
+            randomName = $"{char.ToUpper(adj[0])}{adj.Substring(1)} {char.ToUpper(noun[0])}{noun.Substring(1)}";
+
+            // Save name
+            File.WriteAllText(nameConfigPath, randomName);
+            lblDeviceName.Text = randomName;
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error generating name: {ex.Message}");
+            randomName = "UnnamedDevice";
+            lblDeviceName.Text = randomName;
+        }
+    }
+
+    private void LoadSavedName()
+    {
+        try
+        {
+            string nameConfigPath = Path.Combine(Application.StartupPath, "saved_name.txt");
+            if (File.Exists(nameConfigPath))
+            {
+                randomName = File.ReadAllText(nameConfigPath);
+                lblDeviceName.Text = randomName;
+            }
+            else
+            {
+                GenerateRandomName();
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error loading name: {ex.Message}");
+            randomName = "UnnamedDevice";
+            lblDeviceName.Text = randomName;
+        }
     }
 
     private async void StartListening()
@@ -510,5 +571,59 @@ public partial class Form1 : Form
     private void LblHistory_Click(object? sender, EventArgs e)
     {
         ShowFileHistory();
+    }
+
+    private void LblDeviceName_Click(object? sender, EventArgs e)
+    {
+        var menu = new ContextMenuStrip();
+        var changeNameItem = new ToolStripMenuItem("Change Name");
+        var randomNameItem = new ToolStripMenuItem("Generate Random Name");
+
+        changeNameItem.Click += (s, e) =>
+        {
+            using var inputForm = new Form
+            {
+                Width = 300,
+                Height = 150,
+                FormBorderStyle = FormBorderStyle.FixedDialog,
+                Text = "Change Device Name",
+                StartPosition = FormStartPosition.CenterParent
+            };
+
+            var textBox = new TextBox
+            {
+                Left = 10,
+                Top = 10,
+                Width = 260,
+                Text = randomName
+            };
+
+            var button = new Button
+            {
+                Left = 10,
+                Top = 50,
+                Text = "Save",
+                DialogResult = DialogResult.OK
+            };
+
+            inputForm.Controls.AddRange(new Control[] { textBox, button });
+
+            if (inputForm.ShowDialog() == DialogResult.OK && !string.IsNullOrWhiteSpace(textBox.Text))
+            {
+                randomName = textBox.Text;
+                lblDeviceName.Text = randomName;
+                File.WriteAllText(Path.Combine(Application.StartupPath, "saved_name.txt"), randomName);
+            }
+        };
+
+        randomNameItem.Click += (s, e) =>
+        {
+            GenerateRandomName();
+        };
+
+        menu.Items.Add(changeNameItem);
+        menu.Items.Add(randomNameItem);
+
+        menu.Show(lblDeviceName, new Point(0, lblDeviceName.Height));
     }
 }

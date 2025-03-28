@@ -1,0 +1,26 @@
+{
+  "adjectives": [
+    "beautiful", "strong", "brave", "kind", "clever", "happy", "sad", "angry", "calm", "gentle",
+    "tall", "short", "big", "small", "fast", "slow", "hard", "soft", "bright", "dark",
+    "warm", "cold", "hot", "cool", "old", "young", "new", "ancient", "modern", "famous",
+    "unknown", "popular", "rare", "common", "rich", "poor", "easy", "difficult", "lucky", "unlucky",
+    "strong", "weak", "heavy", "light", "noisy", "quiet", "clean", "dirty", "wide", "narrow",
+    "sharp", "dull", "smooth", "rough", "deep", "shallow", "tasty", "bland", "sweet", "bitter",
+    "sour", "spicy", "juicy", "dry", "happy", "joyful", "miserable", "friendly", "unfriendly", "polite",
+    "rude", "honest", "dishonest", "loyal", "unloyal", "brilliant", "stupid", "generous", "selfish", "curious",
+    "bored", "excited", "nervous", "anxious", "scared", "fearless", "lazy", "hardworking", "grateful", "greedy",
+    "caring", "cruel", "funny", "serious", "loving", "hateful", "optimistic", "pessimistic", "energetic", "tired"
+  ],
+  "nouns": [
+    "dog", "cat", "house", "car", "tree", "river", "mountain", "sky", "ocean", "flower",
+    "book", "pen", "computer", "phone", "table", "chair", "door", "window", "wall", "roof",
+    "sun", "moon", "star", "cloud", "rain", "snow", "wind", "storm", "thunder", "lightning",
+    "bird", "fish", "horse", "cow", "sheep", "chicken", "lion", "tiger", "elephant", "monkey",
+    "banana", "apple", "orange", "grape", "watermelon", "strawberry", "pineapple", "peach", "mango", "cherry",
+    "bus", "train", "bicycle", "motorcycle", "truck", "ship", "airplane", "helicopter", "submarine", "rocket",
+    "shirt", "pants", "shoes", "hat", "jacket", "gloves", "scarf", "belt", "socks", "tie",
+    "king", "queen", "prince", "princess", "soldier", "teacher", "doctor", "engineer", "artist", "chef",
+    "pencil", "eraser", "notebook", "calculator", "ruler", "backpack", "clock", "mirror", "candle", "lamp",
+    "pizza", "hamburger", "sandwich", "pasta", "soup", "cake", "chocolate", "candy", "ice cream", "cookie"
+  ]
+}
