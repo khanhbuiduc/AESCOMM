@@ -19,6 +19,20 @@ public partial class Form1 : Form
         InitializeComponent();
         btnSend.Click += BtnSend_Click;
 
+        // Load logo
+        try
+        {
+            string logoPath = Path.Combine(Application.StartupPath, "logo.png");
+            if (File.Exists(logoPath))
+            {
+                logoPictureBox.Image = Image.FromFile(logoPath);
+            }
+        }
+        catch
+        {
+            // If logo loading fails, continue without image
+        }
+
         // Generate random key for AES-256
         encryptionKey = new uint[]
         {
@@ -171,9 +185,14 @@ public partial class Form1 : Form
                     string savePath = GetUniqueFilePath(basePath);
                     await File.WriteAllBytesAsync(savePath, fileContent);
 
+                    // Add to download history
+                    string historyEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} | {fileName} | {savePath}";
+                    string historyPath = Path.Combine(Application.StartupPath, "DownloadHistory.txt");
+                    await File.AppendAllTextAsync(historyPath, historyEntry + Environment.NewLine);
+
                     this.Invoke(() =>
                     {
-                        txtReceived.AppendText($"{DateTime.Now}: Received and saved file: {savePath}{Environment.NewLine}");
+                        MessageBox.Show($"Received and saved file: {savePath}", "File Received", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     });
                 }
                 else
@@ -196,7 +215,7 @@ public partial class Form1 : Form
 
                     this.Invoke(() =>
                     {
-                        txtReceived.AppendText($"{DateTime.Now}: {message}{Environment.NewLine}");
+                        MessageBox.Show($"Message received: {message}", "Message Received", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     });
                 }
             }
@@ -423,5 +442,54 @@ public partial class Form1 : Form
             }
         }
         throw new Exception("No network adapters found");
+    }
+
+    private void tabPage1_Click(object sender, EventArgs e)
+    {
+
+    }
+
+    // Add method to view history
+    private void ShowFileHistory()
+    {
+        try
+        {
+            string historyPath = Path.Combine(Application.StartupPath, "DownloadHistory.txt");
+            if (File.Exists(historyPath))
+            {
+                string history = File.ReadAllText(historyPath);
+                using (var form = new Form())
+                {
+                    form.Text = "Download History";
+                    form.Size = new Size(600, 400);
+
+                    var textBox = new TextBox
+                    {
+                        Multiline = true,
+                        ReadOnly = true,
+                        Dock = DockStyle.Fill,
+                        ScrollBars = ScrollBars.Both,
+                        Text = history,
+                        Font = new Font("Consolas", 10)
+                    };
+
+                    form.Controls.Add(textBox);
+                    form.ShowDialog();
+                }
+            }
+            else
+            {
+                MessageBox.Show("No download history available", "History", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error reading history: {ex.Message}");
+        }
+    }
+
+    private void LblHistory_Click(object? sender, EventArgs e)
+    {
+        ShowFileHistory();
     }
 }

@@ -11,14 +11,14 @@ partial class Form1
     ///  Clean up any resources being used.
     /// </summary>
     /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
-    protected override void Dispose(bool disposing)
-    {
-        if (disposing && (components != null))
-        {
-            components.Dispose();
-        }
-        base.Dispose(disposing);
-    }
+    // protected override void Dispose(bool(disposing)
+    // {
+    //     if (disposing && (components != null))
+    //     {
+    //         components.Dispose();
+    //     }
+    //     base.Dispose(disposing);
+    // }
 
     #region Windows Form Designer generated code
 
@@ -30,7 +30,9 @@ partial class Form1
     {
         tabControl1 = new TabControl();
         tabPage1 = new TabPage();
-        txtReceived = new TextBox();
+        lblHistory = new Label();
+        logoPictureBox = new PictureBox();
+        listenPanel = new Panel();
         tabPage2 = new TabPage();
         txtMessage = new TextBox();
         btnSend = new Button();
@@ -39,6 +41,7 @@ partial class Form1
         btnSelectFile = new Button();
         tabControl1.SuspendLayout();
         tabPage1.SuspendLayout();
+        ((System.ComponentModel.ISupportInitialize)logoPictureBox).BeginInit();
         tabPage2.SuspendLayout();
         SuspendLayout();
         // 
@@ -56,25 +59,50 @@ partial class Form1
         // 
         // tabPage1
         // 
-        tabPage1.Controls.Add(txtReceived);
+        tabPage1.Controls.Add(lblHistory);
+        tabPage1.Controls.Add(logoPictureBox);
+        tabPage1.Controls.Add(listenPanel);
         tabPage1.Location = new Point(4, 24);
         tabPage1.Margin = new Padding(3, 2, 3, 2);
         tabPage1.Name = "tabPage1";
         tabPage1.Size = new Size(692, 310);
         tabPage1.TabIndex = 0;
         tabPage1.Text = "Listen";
+        tabPage1.Click += tabPage1_Click;
         // 
-        // txtReceived
+        // lblHistory
         // 
-        txtReceived.Dock = DockStyle.Fill;
-        txtReceived.Location = new Point(0, 0);
-        txtReceived.Margin = new Padding(9, 8, 9, 8);
-        txtReceived.Multiline = true;
-        txtReceived.Name = "txtReceived";
-        txtReceived.ReadOnly = true;
-        txtReceived.ScrollBars = ScrollBars.Vertical;
-        txtReceived.Size = new Size(692, 310);
-        txtReceived.TabIndex = 0;
+        lblHistory.BackColor = Color.Transparent;
+        lblHistory.Cursor = Cursors.Hand;
+        lblHistory.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+        lblHistory.ForeColor = Color.SlateGray;
+        lblHistory.Image = Properties.Resources.history_301;
+        lblHistory.ImageAlign = ContentAlignment.MiddleLeft;
+        lblHistory.Location = new Point(61, 20);
+        lblHistory.Name = "lblHistory";
+        lblHistory.Size = new Size(101, 21);
+        lblHistory.TabIndex = 1;
+        lblHistory.Text = "History";
+        lblHistory.TextAlign = ContentAlignment.MiddleRight;
+        lblHistory.Click += LblHistory_Click;
+        // 
+        // logoPictureBox
+        // 
+        logoPictureBox.Anchor = AnchorStyles.None;
+        logoPictureBox.ErrorImage = Properties.Resources.security_aes;
+        logoPictureBox.Location = new Point(377, 20);
+        logoPictureBox.Name = "logoPictureBox";
+        logoPictureBox.Size = new Size(250, 250);
+        logoPictureBox.SizeMode = PictureBoxSizeMode.Zoom;
+        logoPictureBox.TabIndex = 0;
+        logoPictureBox.TabStop = false;
+        // 
+        // listenPanel
+        // 
+        listenPanel.Location = new Point(131, 112);
+        listenPanel.Name = "listenPanel";
+        listenPanel.Size = new Size(200, 100);
+        listenPanel.TabIndex = 0;
         // 
         // tabPage2
         // 
@@ -150,7 +178,7 @@ partial class Form1
         Text = "TCP Messenger";
         tabControl1.ResumeLayout(false);
         tabPage1.ResumeLayout(false);
-        tabPage1.PerformLayout();
+        ((System.ComponentModel.ISupportInitialize)logoPictureBox).EndInit();
         tabPage2.ResumeLayout(false);
         tabPage2.PerformLayout();
         ResumeLayout(false);
@@ -159,12 +187,15 @@ partial class Form1
     private TabControl tabControl1;
     private TabPage tabPage1;
     private TabPage tabPage2;
-    private TextBox txtReceived;
     private TextBox txtMessage;
     private Button btnSend;
     private ListBox deviceList;
     private Button btnScan;
     private Button btnSelectFile;
+    private PictureBox logoPictureBox;
+    private Label lblHistory;
 
     #endregion
+
+    private Panel listenPanel;
 }
