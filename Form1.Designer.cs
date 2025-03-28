@@ -31,119 +31,123 @@ partial class Form1
         tabControl1 = new TabControl();
         tabPage1 = new TabPage();
         txtReceived = new TextBox();
-        btnListen = new Button();
-        txtListenPort = new TextBox();
-        label1 = new Label();
         tabPage2 = new TabPage();
         txtMessage = new TextBox();
         btnSend = new Button();
-        txtSendPort = new TextBox();
-        txtHost = new TextBox();
-        label3 = new Label();
-        label2 = new Label();
-
+        deviceList = new ListBox();
+        btnScan = new Button();
+        btnSelectFile = new Button();
         tabControl1.SuspendLayout();
         tabPage1.SuspendLayout();
         tabPage2.SuspendLayout();
         SuspendLayout();
-
+        // 
         // tabControl1
+        // 
         tabControl1.Controls.Add(tabPage1);
         tabControl1.Controls.Add(tabPage2);
         tabControl1.Dock = DockStyle.Fill;
         tabControl1.Location = new Point(0, 0);
+        tabControl1.Margin = new Padding(3, 2, 3, 2);
         tabControl1.Name = "tabControl1";
         tabControl1.SelectedIndex = 0;
-        tabControl1.Size = new Size(800, 450);
+        tabControl1.Size = new Size(700, 338);
         tabControl1.TabIndex = 0;
-
-        // tabPage1 (Listen)
+        // 
+        // tabPage1
+        // 
         tabPage1.Controls.Add(txtReceived);
-        tabPage1.Controls.Add(btnListen);
-        tabPage1.Controls.Add(txtListenPort);
-        tabPage1.Controls.Add(label1);
-        tabPage1.Location = new Point(4, 29);
+        tabPage1.Location = new Point(4, 24);
+        tabPage1.Margin = new Padding(3, 2, 3, 2);
         tabPage1.Name = "tabPage1";
-        tabPage1.Size = new Size(792, 417);
+        tabPage1.Size = new Size(692, 310);
         tabPage1.TabIndex = 0;
         tabPage1.Text = "Listen";
-
-        // Listen controls
-        label1.AutoSize = true;
-        label1.Location = new Point(10, 20);
-        label1.Name = "label1";
-        label1.Size = new Size(35, 20);
-        label1.Text = "Port:";
-
-        txtListenPort.Location = new Point(50, 17);
-        txtListenPort.Name = "txtListenPort";
-        txtListenPort.Size = new Size(100, 27);
-
-        btnListen.Location = new Point(160, 16);
-        btnListen.Name = "btnListen";
-        btnListen.Size = new Size(94, 29);
-        btnListen.Text = "Listen";
-
-        txtReceived.Location = new Point(10, 60);
+        // 
+        // txtReceived
+        // 
+        txtReceived.Dock = DockStyle.Fill;
+        txtReceived.Location = new Point(0, 0);
+        txtReceived.Margin = new Padding(9, 8, 9, 8);
         txtReceived.Multiline = true;
         txtReceived.Name = "txtReceived";
         txtReceived.ReadOnly = true;
         txtReceived.ScrollBars = ScrollBars.Vertical;
-        txtReceived.Size = new Size(770, 340);
-
-        // tabPage2 (Send)
+        txtReceived.Size = new Size(692, 310);
+        txtReceived.TabIndex = 0;
+        // 
+        // tabPage2
+        // 
         tabPage2.Controls.Add(txtMessage);
         tabPage2.Controls.Add(btnSend);
-        tabPage2.Controls.Add(txtSendPort);
-        tabPage2.Controls.Add(txtHost);
-        tabPage2.Controls.Add(label3);
-        tabPage2.Controls.Add(label2);
-        tabPage2.Location = new Point(4, 29);
+        tabPage2.Controls.Add(deviceList);
+        tabPage2.Controls.Add(btnScan);
+        tabPage2.Controls.Add(btnSelectFile);
+        tabPage2.Location = new Point(4, 24);
+        tabPage2.Margin = new Padding(3, 2, 3, 2);
         tabPage2.Name = "tabPage2";
-        tabPage2.Size = new Size(792, 417);
+        tabPage2.Size = new Size(692, 310);
         tabPage2.TabIndex = 1;
         tabPage2.Text = "Send";
-
-        // Send controls
-        label2.AutoSize = true;
-        label2.Location = new Point(10, 20);
-        label2.Name = "label2";
-        label2.Size = new Size(40, 20);
-        label2.Text = "Host:";
-
-        label3.AutoSize = true;
-        label3.Location = new Point(220, 20);
-        label3.Name = "label3";
-        label3.Size = new Size(35, 20);
-        label3.Text = "Port:";
-
-        txtHost.Location = new Point(60, 17);
-        txtHost.Name = "txtHost";
-        txtHost.Size = new Size(150, 27);
-
-        txtSendPort.Location = new Point(260, 17);
-        txtSendPort.Name = "txtSendPort";
-        txtSendPort.Size = new Size(100, 27);
-
-        btnSend.Location = new Point(370, 16);
-        btnSend.Name = "btnSend";
-        btnSend.Size = new Size(94, 29);
-        btnSend.Text = "Send";
-
-        txtMessage.Location = new Point(10, 60);
+        // 
+        // txtMessage
+        // 
+        txtMessage.Location = new Point(10, 50);
+        txtMessage.Margin = new Padding(3, 2, 3, 2);
         txtMessage.Multiline = true;
         txtMessage.Name = "txtMessage";
         txtMessage.ScrollBars = ScrollBars.Vertical;
-        txtMessage.Size = new Size(770, 340);
-
+        txtMessage.Size = new Size(460, 74);
+        txtMessage.TabIndex = 0;
+        // 
+        // btnSend
+        // 
+        btnSend.Location = new Point(248, 242);
+        btnSend.Margin = new Padding(3, 2, 3, 2);
+        btnSend.Name = "btnSend";
+        btnSend.Size = new Size(174, 47);
+        btnSend.TabIndex = 1;
+        btnSend.Text = "Send";
+        // 
+        // deviceList
+        // 
+        deviceList.ItemHeight = 15;
+        deviceList.Location = new Point(492, 66);
+        deviceList.Margin = new Padding(3, 2, 3, 2);
+        deviceList.Name = "deviceList";
+        deviceList.Size = new Size(176, 169);
+        deviceList.TabIndex = 6;
+        deviceList.SelectedIndexChanged += DeviceList_SelectedIndexChanged;
+        // 
+        // btnScan
+        // 
+        btnScan.Location = new Point(525, 15);
+        btnScan.Margin = new Padding(3, 2, 3, 2);
+        btnScan.Name = "btnScan";
+        btnScan.Size = new Size(105, 22);
+        btnScan.TabIndex = 7;
+        btnScan.Text = "Scan Network";
+        btnScan.Click += BtnScan_Click;
+        // 
+        // btnSelectFile
+        // 
+        btnSelectFile.Location = new Point(10, 15);
+        btnSelectFile.Margin = new Padding(3, 2, 3, 2);
+        btnSelectFile.Name = "btnSelectFile";
+        btnSelectFile.Size = new Size(78, 22);
+        btnSelectFile.TabIndex = 8;
+        btnSelectFile.Text = "Select File";
+        btnSelectFile.Click += BtnSelectFile_Click;
+        // 
         // Form1
-        AutoScaleDimensions = new SizeF(8F, 20F);
+        // 
+        AutoScaleDimensions = new SizeF(7F, 15F);
         AutoScaleMode = AutoScaleMode.Font;
-        ClientSize = new Size(800, 450);
+        ClientSize = new Size(700, 338);
         Controls.Add(tabControl1);
+        Margin = new Padding(3, 2, 3, 2);
         Name = "Form1";
         Text = "TCP Messenger";
-
         tabControl1.ResumeLayout(false);
         tabPage1.ResumeLayout(false);
         tabPage1.PerformLayout();
@@ -156,15 +160,11 @@ partial class Form1
     private TabPage tabPage1;
     private TabPage tabPage2;
     private TextBox txtReceived;
-    private Button btnListen;
-    private TextBox txtListenPort;
-    private Label label1;
     private TextBox txtMessage;
     private Button btnSend;
-    private TextBox txtSendPort;
-    private TextBox txtHost;
-    private Label label3;
-    private Label label2;
+    private ListBox deviceList;
+    private Button btnScan;
+    private Button btnSelectFile;
 
     #endregion
 }

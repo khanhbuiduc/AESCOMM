@@ -6,6 +6,7 @@ namespace AES2;
 
 public partial class Form1 : Form
 {
+    private const int DEFAULT_PORT = 5001;
     private TcpListener? tcpListener;
     private bool isListening = false;
     private CancellationTokenSource? cts;
@@ -16,18 +17,7 @@ public partial class Form1 : Form
     public Form1()
     {
         InitializeComponent();
-        btnListen.Click += BtnListen_Click;
         btnSend.Click += BtnSend_Click;
-
-        // Add button for file selection
-        Button btnSelectFile = new Button
-        {
-            Text = "Select File",
-            Location = new Point(470, 16),
-            Size = new Size(94, 29)
-        };
-        btnSelectFile.Click += BtnSelectFile_Click;
-        tabPage2.Controls.Add(btnSelectFile);
 
         // Generate random key for AES-256
         encryptionKey = new uint[]
@@ -36,9 +26,34 @@ public partial class Form1 : Form
             0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f
         };
 
-        // Create download directory
+        // Create download directory and start listening
         downloadPath = Path.Combine(Application.StartupPath, "Downloads");
         Directory.CreateDirectory(downloadPath);
+        StartListening();
+    }
+
+    private async void StartListening()
+    {
+        try
+        {
+            tcpListener = new TcpListener(IPAddress.Any, DEFAULT_PORT);
+            tcpListener.Start();
+            isListening = true;
+            cts = new CancellationTokenSource();
+
+            while (!cts.Token.IsCancellationRequested && tcpListener != null)
+            {
+                TcpClient client = await tcpListener.AcceptTcpClientAsync();
+                _ = HandleClientAsync(client);
+            }
+        }
+        catch (Exception ex)
+        {
+            if (!cts?.Token.IsCancellationRequested ?? true)
+            {
+                MessageBox.Show($"Error in listener: {ex.Message}");
+            }
+        }
     }
 
     private void BtnSelectFile_Click(object? sender, EventArgs e)
@@ -51,35 +66,9 @@ public partial class Form1 : Form
             if (openFileDialog.ShowDialog() == DialogResult.OK)
             {
                 selectedFilePath = openFileDialog.FileName;
-                txtMessage.Text = $"Selected file: {Path.GetFileName(selectedFilePath)}";
+                txtMessage.Text = Path.GetFileName(selectedFilePath); // Simplified display
+                txtMessage.ForeColor = Color.Blue; // Optional: to indicate it's a file
             }
-        }
-    }
-
-    private async void BtnListen_Click(object? sender, EventArgs e)
-    {
-        if (!isListening)
-        {
-            try
-            {
-                int port = int.Parse(txtListenPort.Text);
-                tcpListener = new TcpListener(IPAddress.Any, port);
-                tcpListener.Start();
-                isListening = true;
-                btnListen.Text = "Stop";
-                cts = new CancellationTokenSource();
-
-                await ListenForClientsAsync(cts.Token);
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Error starting listener: {ex.Message}");
-            }
-        }
-        else
-        {
-            StopListening();
-            btnListen.Text = "Listen";
         }
     }
 
@@ -135,6 +124,10 @@ public partial class Form1 : Form
                 await stream.ReadAsync(sizeBuffer, 0, 4);
                 int totalSize = BitConverter.ToInt32(sizeBuffer);
 
+                // Validate size
+                if (totalSize <= 0)
+                    return;
+
                 // Read data
                 byte[] buffer = new byte[totalSize];
                 int bytesRead = 0;
@@ -144,6 +137,10 @@ public partial class Form1 : Form
                     if (read == 0) break;
                     bytesRead += read;
                 }
+
+                // Validate read size
+                if (bytesRead < totalSize)
+                    return;
 
                 // Check if it's a file
                 bool isFile = buffer[0] == 1;
@@ -181,9 +178,15 @@ public partial class Form1 : Form
                 }
                 else
                 {
-                    // Handle regular message
-                    uint[][] encryptedBlocks = new uint[totalSize / 16][];
-                    for (int i = 0; i < encryptedBlocks.Length; i++)
+                    // Validate block size for message
+                    if (totalSize < 17) // At least 1 byte flag + 16 bytes data
+                        return;
+
+                    // Calculate number of blocks (excluding the flag byte)
+                    int numBlocks = (totalSize - 1) / 16;
+                    uint[][] encryptedBlocks = new uint[numBlocks][];
+
+                    for (int i = 0; i < numBlocks; i++)
                     {
                         encryptedBlocks[i] = new uint[4];
                         Buffer.BlockCopy(buffer, 1 + (i * 16), encryptedBlocks[i], 0, 16);
@@ -229,8 +232,14 @@ public partial class Form1 : Form
     {
         try
         {
-            string host = txtHost.Text;
-            int port = int.Parse(txtSendPort.Text);
+            if (deviceList.SelectedItem == null || deviceList.SelectedItem.ToString() == "No devices found" || deviceList.SelectedItem.ToString() == "Scanning...")
+            {
+                MessageBox.Show("Please select a device from the list first");
+                return;
+            }
+
+            string host = deviceList.SelectedItem.ToString();
+            int port = DEFAULT_PORT;
 
             string message;
             byte[] fileNameBytes = Array.Empty<byte>();
@@ -323,5 +332,96 @@ public partial class Form1 : Form
     {
         StopListening();
         base.OnFormClosing(e);
+    }
+
+    private async void BtnScan_Click(object? sender, EventArgs e)
+    {
+        deviceList.Items.Clear();
+        deviceList.Items.Add("Scanning...");
+        btnScan.Enabled = false;
+
+        try
+        {
+            var hosts = await ScanNetworkAsync();
+            deviceList.Items.Clear();
+            foreach (var host in hosts)
+            {
+                deviceList.Items.Add(host);
+            }
+
+            if (deviceList.Items.Count == 0)
+            {
+                deviceList.Items.Add("No devices found");
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Scan error: {ex.Message}");
+        }
+        finally
+        {
+            btnScan.Enabled = true;
+        }
+    }
+
+    private void DeviceList_SelectedIndexChanged(object? sender, EventArgs e)
+    {
+        // No need to update text boxes anymore since they're removed
+        // Just let the BtnSend_Click handle the selected device
+    }
+
+    private async Task<List<string>> ScanNetworkAsync()
+    {
+        var hosts = new List<string>();
+        var localIp = GetLocalIPAddress();
+        var baseIp = localIp.Substring(0, localIp.LastIndexOf('.') + 1);
+        var tasks = new List<Task>();
+
+        for (int i = 1; i <= 255; i++)
+        {
+            var ip = baseIp + i;
+            tasks.Add(CheckHostAsync(ip, hosts));
+        }
+
+        await Task.WhenAll(tasks);
+        return hosts;
+    }
+
+    private async Task CheckHostAsync(string ip, List<string> hosts)
+    {
+        try
+        {
+            using (var client = new TcpClient())
+            {
+                var connectTask = client.ConnectAsync(ip, DEFAULT_PORT);
+                if (await Task.WhenAny(connectTask, Task.Delay(100)) == connectTask)
+                {
+                    if (client.Connected)
+                    {
+                        lock (hosts)
+                        {
+                            hosts.Add(ip);
+                        }
+                    }
+                }
+            }
+        }
+        catch
+        {
+            // Connection failed, ignore
+        }
+    }
+
+    private string GetLocalIPAddress()
+    {
+        var host = Dns.GetHostEntry(Dns.GetHostName());
+        foreach (var ip in host.AddressList)
+        {
+            if (ip.AddressFamily == System.Net.Sockets.AddressFamily.InterNetwork)
+            {
+                return ip.ToString();
+            }
+        }
+        throw new Exception("No network adapters found");
     }
 }
