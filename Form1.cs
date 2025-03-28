@@ -180,19 +180,52 @@ public partial class Form1 : Form
                     string base64Content = Aes256Helper.DecryptCBC(encryptedBlocks, encryptionKey);
                     byte[] fileContent = Convert.FromBase64String(base64Content);
 
-                    // Save file with unique name
-                    string basePath = Path.Combine(downloadPath, fileName);
-                    string savePath = GetUniqueFilePath(basePath);
-                    await File.WriteAllBytesAsync(savePath, fileContent);
+                    // Create encrypted and decrypted folders
+                    string encryptedPath = Path.Combine(downloadPath, "Encrypted");
+                    string decryptedPath = Path.Combine(downloadPath, "Decrypted");
+                    Directory.CreateDirectory(encryptedPath);
+                    Directory.CreateDirectory(decryptedPath);
 
-                    // Add to download history
-                    string historyEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} | {fileName} | {savePath}";
+                    // Save encrypted file
+                    string encryptedFileName = $"{fileName}.encrypted";
+                    string encryptedFilePath = Path.Combine(encryptedPath, encryptedFileName);
+                    encryptedFilePath = GetUniqueFilePath(encryptedFilePath);
+                    await File.WriteAllBytesAsync(encryptedFilePath, buffer);
+
+                    // Save decrypted file
+                    string decryptedFilePath = Path.Combine(decryptedPath, fileName);
+                    decryptedFilePath = GetUniqueFilePath(decryptedFilePath);
+                    await File.WriteAllBytesAsync(decryptedFilePath, fileContent);
+
+                    // Add to download history with both paths
+                    string historyEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} | {fileName} | Encrypted: {encryptedFilePath} | Decrypted: {decryptedFilePath}";
                     string historyPath = Path.Combine(Application.StartupPath, "DownloadHistory.txt");
                     await File.AppendAllTextAsync(historyPath, historyEntry + Environment.NewLine);
 
                     this.Invoke(() =>
                     {
-                        MessageBox.Show($"Received and saved file: {savePath}", "File Received", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        var result = MessageBox.Show(
+                            $"File saved:\nEncrypted: {encryptedFilePath}\nDecrypted: {decryptedFilePath}\n\nDo you want to open the decrypted file?",
+                            "File Received",
+                            MessageBoxButtons.YesNo,
+                            MessageBoxIcon.Information);
+
+                        if (result == DialogResult.Yes)
+                        {
+                            try
+                            {
+                                var startInfo = new System.Diagnostics.ProcessStartInfo
+                                {
+                                    FileName = decryptedFilePath,
+                                    UseShellExecute = true
+                                };
+                                System.Diagnostics.Process.Start(startInfo);
+                            }
+                            catch (Exception ex)
+                            {
+                                MessageBox.Show($"Error opening file: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            }
+                        }
                     });
                 }
                 else
