@@ -345,13 +345,13 @@ public partial class Form1 : Form
     {
         try
         {
-            if (deviceList.SelectedItem == null || deviceList.SelectedItem.ToString() == "No devices found" || deviceList.SelectedItem.ToString() == "Scanning...")
+            if (deviceList.SelectedItem is not DeviceItem device || device.IpAddress == "")
             {
                 MessageBox.Show("Please select a device from the list first");
                 return;
             }
 
-            string host = deviceList.SelectedItem.ToString();
+            string host = device.IpAddress;
             int port = DEFAULT_PORT;
 
             string message;
@@ -457,14 +457,17 @@ public partial class Form1 : Form
         {
             var hosts = await ScanNetworkAsync();
             deviceList.Items.Clear();
-            foreach (var host in hosts)
+
+            // Store IP address in Tag property
+            foreach (var (ip, name) in hosts)
             {
-                deviceList.Items.Add(host);
+                var item = new ListViewItem(name);
+                deviceList.Items.Add(new DeviceItem(name, ip));
             }
 
             if (deviceList.Items.Count == 0)
             {
-                deviceList.Items.Add("No devices found");
+                deviceList.Items.Add(new DeviceItem("No devices found", ""));
             }
         }
         catch (Exception ex)
@@ -483,9 +486,9 @@ public partial class Form1 : Form
         // Just let the BtnSend_Click handle the selected device
     }
 
-    private async Task<List<string>> ScanNetworkAsync()
+    private async Task<List<(string ip, string name)>> ScanNetworkAsync()
     {
-        var hosts = new List<string>();
+        var hosts = new List<(string ip, string name)>();
         var localIp = GetLocalIPAddress();
         var baseIp = localIp.Substring(0, localIp.LastIndexOf('.') + 1);
         var tasks = new List<Task>();
@@ -500,7 +503,7 @@ public partial class Form1 : Form
         return hosts;
     }
 
-    private async Task CheckHostAsync(string ip, List<string> hosts)
+    private async Task CheckHostAsync(string ip, List<(string ip, string name)> hosts)
     {
         try
         {
@@ -511,9 +514,11 @@ public partial class Form1 : Form
                 {
                     if (client.Connected)
                     {
+                        // Try to read device name from connected client
+                        string deviceName = await GetDeviceNameAsync(ip);
                         lock (hosts)
                         {
-                            hosts.Add(ip);
+                            hosts.Add((ip, deviceName));
                         }
                     }
                 }
@@ -522,6 +527,28 @@ public partial class Form1 : Form
         catch
         {
             // Connection failed, ignore
+        }
+    }
+
+    private async Task<string> GetDeviceNameAsync(string ip)
+    {
+        try
+        {
+            string nameConfigPath = Path.Combine(Application.StartupPath, "saved_name.txt");
+            if (ip == GetLocalIPAddress() && File.Exists(nameConfigPath))
+            {
+                return await File.ReadAllTextAsync(nameConfigPath);
+            }
+
+            using (var client = new TcpClient())
+            {
+                await client.ConnectAsync(ip, DEFAULT_PORT);
+                return $"Device at {ip}"; // Placeholder for when we can't get actual name
+            }
+        }
+        catch
+        {
+            return $"Unknown Device ({ip})";
         }
     }
 
@@ -625,5 +652,22 @@ public partial class Form1 : Form
         menu.Items.Add(randomNameItem);
 
         menu.Show(lblDeviceName, new Point(0, lblDeviceName.Height));
+    }
+
+    private class DeviceItem
+    {
+        public string Name { get; }
+        public string IpAddress { get; }
+
+        public DeviceItem(string name, string ip)
+        {
+            Name = name;
+            IpAddress = ip;
+        }
+
+        public override string ToString()
+        {
+            return Name;
+        }
     }
 }
