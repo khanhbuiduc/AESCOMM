@@ -1,4 +1,4 @@
-﻿namespace AES2;
+namespace AES2;
 
 partial class Form1
 {
@@ -40,6 +40,10 @@ partial class Form1
         deviceList = new ListBox();
         btnScan = new Button();
         btnSelectFile = new Button();
+        lblHost = new Label();
+        txtHost = new TextBox();
+        lblPort = new Label();
+        txtPort = new TextBox();
         tabControl1.SuspendLayout();
         tabPage1.SuspendLayout();
         ((System.ComponentModel.ISupportInitialize)logoPictureBox).BeginInit();
@@ -108,11 +112,10 @@ partial class Form1
         // 
         // lblDeviceName
         // 
-        lblDeviceName.Cursor = Cursors.Hand;
-        lblDeviceName.ForeColor = Color.RoyalBlue;
         lblDeviceName.BackColor = Color.Transparent;
+        lblDeviceName.Cursor = Cursors.Hand;
         lblDeviceName.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
-        lblDeviceName.TextAlign = ContentAlignment.MiddleCenter;
+        lblDeviceName.ForeColor = Color.RoyalBlue;
         lblDeviceName.Location = new Point(377, 234);
         lblDeviceName.Name = "lblDeviceName";
         lblDeviceName.Size = new Size(277, 49);
@@ -127,6 +130,10 @@ partial class Form1
         tabPage2.Controls.Add(deviceList);
         tabPage2.Controls.Add(btnScan);
         tabPage2.Controls.Add(btnSelectFile);
+        tabPage2.Controls.Add(lblHost);
+        tabPage2.Controls.Add(txtHost);
+        tabPage2.Controls.Add(lblPort);
+        tabPage2.Controls.Add(txtPort);
         tabPage2.Location = new Point(4, 24);
         tabPage2.Margin = new Padding(3, 2, 3, 2);
         tabPage2.Name = "tabPage2";
@@ -136,27 +143,26 @@ partial class Form1
         // 
         // txtMessage
         // 
-        txtMessage.Location = new Point(10, 50);
+        txtMessage.Location = new Point(28, 50);
         txtMessage.Margin = new Padding(3, 2, 3, 2);
         txtMessage.Multiline = true;
         txtMessage.Name = "txtMessage";
-        txtMessage.ScrollBars = ScrollBars.Vertical;
-        txtMessage.Size = new Size(460, 74);
+        txtMessage.Size = new Size(168, 169);
         txtMessage.TabIndex = 0;
         // 
         // btnSend
         // 
-        btnSend.Location = new Point(248, 242);
+        btnSend.Location = new Point(275, 242);
         btnSend.Margin = new Padding(3, 2, 3, 2);
         btnSend.Name = "btnSend";
-        btnSend.Size = new Size(174, 47);
+        btnSend.Size = new Size(167, 47);
         btnSend.TabIndex = 1;
         btnSend.Text = "Send";
         // 
         // deviceList
         // 
         deviceList.ItemHeight = 15;
-        deviceList.Location = new Point(492, 66);
+        deviceList.Location = new Point(492, 50);
         deviceList.Margin = new Padding(3, 2, 3, 2);
         deviceList.Name = "deviceList";
         deviceList.Size = new Size(176, 169);
@@ -165,23 +171,55 @@ partial class Form1
         // 
         // btnScan
         // 
-        btnScan.Location = new Point(525, 15);
+        btnScan.Location = new Point(492, 223);
         btnScan.Margin = new Padding(3, 2, 3, 2);
         btnScan.Name = "btnScan";
-        btnScan.Size = new Size(105, 22);
+        btnScan.Size = new Size(176, 22);
         btnScan.TabIndex = 7;
         btnScan.Text = "Scan Network";
         btnScan.Click += BtnScan_Click;
         // 
         // btnSelectFile
         // 
-        btnSelectFile.Location = new Point(10, 15);
+        btnSelectFile.Location = new Point(28, 223);
         btnSelectFile.Margin = new Padding(3, 2, 3, 2);
         btnSelectFile.Name = "btnSelectFile";
-        btnSelectFile.Size = new Size(78, 22);
+        btnSelectFile.Size = new Size(168, 22);
         btnSelectFile.TabIndex = 8;
         btnSelectFile.Text = "Select File";
         btnSelectFile.Click += BtnSelectFile_Click;
+        // 
+        // lblHost
+        // 
+        lblHost.Location = new Point(215, 50);
+        lblHost.Name = "lblHost";
+        lblHost.Size = new Size(40, 20);
+        lblHost.TabIndex = 9;
+        lblHost.Text = "Host:";
+        // 
+        // txtHost
+        // 
+        txtHost.Location = new Point(275, 50);
+        txtHost.Name = "txtHost";
+        txtHost.Size = new Size(200, 23);
+        txtHost.TabIndex = 10;
+        txtHost.TextChanged += txtHost_TextChanged;
+        // 
+        // lblPort
+        // 
+        lblPort.Location = new Point(215, 91);
+        lblPort.Name = "lblPort";
+        lblPort.Size = new Size(40, 20);
+        lblPort.TabIndex = 11;
+        lblPort.Text = "Port:";
+        // 
+        // txtPort
+        // 
+        txtPort.Location = new Point(275, 88);
+        txtPort.Name = "txtPort";
+        txtPort.ReadOnly = true;
+        txtPort.Size = new Size(80, 23);
+        txtPort.TabIndex = 12;
         // 
         // Form1
         // 
@@ -211,6 +249,10 @@ partial class Form1
     private PictureBox logoPictureBox;
     private Label lblHistory;
     private Label lblDeviceName;
+    private Label lblHost;
+    private TextBox txtHost;
+    private Label lblPort;
+    private TextBox txtPort;
 
     #endregion
 

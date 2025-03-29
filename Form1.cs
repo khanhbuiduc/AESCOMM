@@ -119,7 +119,19 @@ public partial class Form1 : Form
             while (!cts.Token.IsCancellationRequested && tcpListener != null)
             {
                 TcpClient client = await tcpListener.AcceptTcpClientAsync();
-                _ = HandleClientAsync(client);
+                _ = Task.Run(async () =>
+                {
+                    using (client)
+                    using (NetworkStream stream = client.GetStream())
+                    {
+                        // Send the device name to the connecting client
+                        byte[] nameBytes = Encoding.UTF8.GetBytes(randomName);
+                        await stream.WriteAsync(nameBytes, 0, nameBytes.Length);
+
+                        // Handle further communication if needed
+                        await HandleClientAsync(client);
+                    }
+                });
             }
         }
         catch (Exception ex)
@@ -345,14 +357,18 @@ public partial class Form1 : Form
     {
         try
         {
-            if (deviceList.SelectedItem is not DeviceItem device || device.IpAddress == "")
+            string host = txtHost.Text;
+            if (string.IsNullOrEmpty(host))
             {
                 MessageBox.Show("Please select a device from the list first");
                 return;
             }
 
-            string host = device.IpAddress;
-            int port = DEFAULT_PORT;
+            if (!int.TryParse(txtPort.Text, out int port))
+            {
+                MessageBox.Show("Invalid port number");
+                return;
+            }
 
             string message;
             byte[] fileNameBytes = Array.Empty<byte>();
@@ -482,8 +498,11 @@ public partial class Form1 : Form
 
     private void DeviceList_SelectedIndexChanged(object? sender, EventArgs e)
     {
-        // No need to update text boxes anymore since they're removed
-        // Just let the BtnSend_Click handle the selected device
+        if (deviceList.SelectedItem is DeviceItem device)
+        {
+            txtHost.Text = device.IpAddress;
+            txtPort.Text = DEFAULT_PORT.ToString();
+        }
     }
 
     private async Task<List<(string ip, string name)>> ScanNetworkAsync()
@@ -534,16 +553,17 @@ public partial class Form1 : Form
     {
         try
         {
-            string nameConfigPath = Path.Combine(Application.StartupPath, "saved_name.txt");
-            if (ip == GetLocalIPAddress() && File.Exists(nameConfigPath))
-            {
-                return await File.ReadAllTextAsync(nameConfigPath);
-            }
-
             using (var client = new TcpClient())
             {
                 await client.ConnectAsync(ip, DEFAULT_PORT);
-                return $"Device at {ip}"; // Placeholder for when we can't get actual name
+                using (NetworkStream stream = client.GetStream())
+                {
+                    // Read the device name sent by the client
+                    byte[] buffer = new byte[256];
+                    int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+                    string deviceName = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                    return string.IsNullOrWhiteSpace(deviceName) ? $"Device at {ip}" : deviceName;
+                }
             }
         }
         catch
@@ -669,5 +689,10 @@ public partial class Form1 : Form
         {
             return Name;
         }
+    }
+
+    private void txtHost_TextChanged(object sender, EventArgs e)
+    {
+
     }
 }
