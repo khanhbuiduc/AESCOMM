@@ -34,6 +34,7 @@ partial class Form1
         logoPictureBox = new PictureBox();
         listenPanel = new Panel();
         lblDeviceName = new Label();
+        lblInformation = new Label();
         tabPage2 = new TabPage();
         txtMessage = new TextBox();
         btnSend = new Button();
@@ -68,6 +69,7 @@ partial class Form1
         tabPage1.Controls.Add(logoPictureBox);
         tabPage1.Controls.Add(listenPanel);
         tabPage1.Controls.Add(lblDeviceName);
+        tabPage1.Controls.Add(lblInformation);
         tabPage1.Location = new Point(4, 24);
         tabPage1.Margin = new Padding(3, 2, 3, 2);
         tabPage1.Name = "tabPage1";
@@ -84,7 +86,7 @@ partial class Form1
         lblHistory.ForeColor = Color.SlateGray;
         lblHistory.Image = Properties.Resources.history_301;
         lblHistory.ImageAlign = ContentAlignment.MiddleLeft;
-        lblHistory.Location = new Point(61, 20);
+        lblHistory.Location = new Point(117, 129);
         lblHistory.Name = "lblHistory";
         lblHistory.Size = new Size(101, 21);
         lblHistory.TabIndex = 1;
@@ -96,16 +98,16 @@ partial class Form1
         // 
         logoPictureBox.Anchor = AnchorStyles.None;
         logoPictureBox.ErrorImage = Properties.Resources.security_aes;
-        logoPictureBox.Location = new Point(377, 20);
+        logoPictureBox.Location = new Point(343, 0);
         logoPictureBox.Name = "logoPictureBox";
-        logoPictureBox.Size = new Size(277, 192);
+        logoPictureBox.Size = new Size(346, 307);
         logoPictureBox.SizeMode = PictureBoxSizeMode.Zoom;
         logoPictureBox.TabIndex = 0;
         logoPictureBox.TabStop = false;
         // 
         // listenPanel
         // 
-        listenPanel.Location = new Point(131, 112);
+        listenPanel.Location = new Point(67, 202);
         listenPanel.Name = "listenPanel";
         listenPanel.Size = new Size(200, 100);
         listenPanel.TabIndex = 0;
@@ -114,14 +116,30 @@ partial class Form1
         // 
         lblDeviceName.BackColor = Color.Transparent;
         lblDeviceName.Cursor = Cursors.Hand;
-        lblDeviceName.Font = new Font("Segoe UI", 20F, FontStyle.Bold);
-        lblDeviceName.ForeColor = Color.RoyalBlue;
-        lblDeviceName.Location = new Point(377, 234);
+        lblDeviceName.Font = new Font("Segoe UI", 32F, FontStyle.Bold);
+        lblDeviceName.ForeColor = Color.LightSlateGray;
+        lblDeviceName.Location = new Point(-4, 20);
         lblDeviceName.Name = "lblDeviceName";
-        lblDeviceName.Size = new Size(277, 49);
+        lblDeviceName.Size = new Size(375, 90);
         lblDeviceName.TabIndex = 2;
         lblDeviceName.Text = "Device name";
         lblDeviceName.TextAlign = ContentAlignment.MiddleCenter;
+        // 
+        // lblInformation
+        // 
+        lblInformation.BackColor = Color.Transparent;
+        lblInformation.Cursor = Cursors.Hand;
+        lblInformation.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+        lblInformation.ForeColor = Color.DarkSlateGray;
+        lblInformation.Image = Properties.Resources.infor_30;
+        lblInformation.ImageAlign = ContentAlignment.MiddleLeft;
+        lblInformation.Location = new Point(117, 160);
+        lblInformation.Name = "lblInformation";
+        lblInformation.Size = new Size(138, 30);
+        lblInformation.TabIndex = 3;
+        lblInformation.Text = "Information";
+        lblInformation.TextAlign = ContentAlignment.MiddleRight;
+        lblInformation.Click += LblInformation_Click;
         // 
         // tabPage2
         // 
@@ -152,12 +170,16 @@ partial class Form1
         // 
         // btnSend
         // 
-        btnSend.Location = new Point(275, 242);
+        btnSend.BackColor = SystemColors.ActiveCaption;
+        btnSend.Font = new Font("Segoe UI", 24F, FontStyle.Bold, GraphicsUnit.Point, 0);
+        btnSend.ForeColor = SystemColors.Window;
+        btnSend.Location = new Point(215, 235);
         btnSend.Margin = new Padding(3, 2, 3, 2);
         btnSend.Name = "btnSend";
-        btnSend.Size = new Size(167, 47);
+        btnSend.Size = new Size(260, 54);
         btnSend.TabIndex = 1;
         btnSend.Text = "Send";
+        btnSend.UseVisualStyleBackColor = false;
         // 
         // deviceList
         // 
@@ -171,22 +193,30 @@ partial class Form1
         // 
         // btnScan
         // 
+        btnScan.BackColor = SystemColors.ControlDark;
+        btnScan.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+        btnScan.ForeColor = SystemColors.Window;
         btnScan.Location = new Point(492, 223);
         btnScan.Margin = new Padding(3, 2, 3, 2);
         btnScan.Name = "btnScan";
-        btnScan.Size = new Size(176, 22);
+        btnScan.Size = new Size(176, 35);
         btnScan.TabIndex = 7;
         btnScan.Text = "Scan Network";
+        btnScan.UseVisualStyleBackColor = false;
         btnScan.Click += BtnScan_Click;
         // 
         // btnSelectFile
         // 
+        btnSelectFile.BackColor = SystemColors.ControlDark;
+        btnSelectFile.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
+        btnSelectFile.ForeColor = SystemColors.Window;
         btnSelectFile.Location = new Point(28, 223);
         btnSelectFile.Margin = new Padding(3, 2, 3, 2);
         btnSelectFile.Name = "btnSelectFile";
-        btnSelectFile.Size = new Size(168, 22);
+        btnSelectFile.Size = new Size(168, 35);
         btnSelectFile.TabIndex = 8;
         btnSelectFile.Text = "Select File";
+        btnSelectFile.UseVisualStyleBackColor = false;
         btnSelectFile.Click += BtnSelectFile_Click;
         // 
         // lblHost
@@ -217,7 +247,6 @@ partial class Form1
         // 
         txtPort.Location = new Point(275, 88);
         txtPort.Name = "txtPort";
-        txtPort.ReadOnly = true;
         txtPort.Size = new Size(80, 23);
         txtPort.TabIndex = 12;
         // 
@@ -253,6 +282,7 @@ partial class Form1
     private TextBox txtHost;
     private Label lblPort;
     private TextBox txtPort;
+    private Label lblInformation;
 
     #endregion
 

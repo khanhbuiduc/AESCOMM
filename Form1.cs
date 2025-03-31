@@ -201,137 +201,127 @@ public partial class Form1 : Form
 
     private async Task HandleClientAsync(TcpClient client)
     {
-        try
+        using (client)
+        using (NetworkStream stream = client.GetStream())
         {
-            using (client)
-            using (NetworkStream stream = client.GetStream())
+            // Read total size first
+            byte[] sizeBuffer = new byte[4];
+            await stream.ReadAsync(sizeBuffer, 0, 4);
+            int totalSize = BitConverter.ToInt32(sizeBuffer);
+
+            // Validate size
+            if (totalSize <= 0)
+                return;
+
+            // Read data
+            byte[] buffer = new byte[totalSize];
+            int bytesRead = 0;
+            while (bytesRead < totalSize)
             {
-                // Read total size first
-                byte[] sizeBuffer = new byte[4];
-                await stream.ReadAsync(sizeBuffer, 0, 4);
-                int totalSize = BitConverter.ToInt32(sizeBuffer);
-
-                // Validate size
-                if (totalSize <= 0)
-                    return;
-
-                // Read data
-                byte[] buffer = new byte[totalSize];
-                int bytesRead = 0;
-                while (bytesRead < totalSize)
-                {
-                    int read = await stream.ReadAsync(buffer, bytesRead, totalSize - bytesRead);
-                    if (read == 0) break;
-                    bytesRead += read;
-                }
-
-                // Validate read size
-                if (bytesRead < totalSize)
-                    return;
-
-                // Check if it's a file
-                bool isFile = buffer[0] == 1;
-
-                if (isFile)
-                {
-                    // Read file name length and file name
-                    int fileNameLength = BitConverter.ToInt32(buffer, 1);
-                    string fileName = Encoding.UTF8.GetString(buffer, 5, fileNameLength);
-
-                    // Get encrypted blocks
-                    int encryptedDataStart = 5 + fileNameLength;
-                    int encryptedDataLength = totalSize - encryptedDataStart;
-                    uint[][] encryptedBlocks = new uint[encryptedDataLength / 16][];
-
-                    for (int i = 0; i < encryptedBlocks.Length; i++)
-                    {
-                        encryptedBlocks[i] = new uint[4];
-                        Buffer.BlockCopy(buffer, encryptedDataStart + (i * 16), encryptedBlocks[i], 0, 16);
-                    }
-
-                    // Decrypt data
-                    string base64Content = Aes256Helper.DecryptCBC(encryptedBlocks, encryptionKey);
-                    byte[] fileContent = Convert.FromBase64String(base64Content);
-
-                    // Create encrypted and decrypted folders
-                    string encryptedPath = Path.Combine(downloadPath, "Encrypted");
-                    string decryptedPath = Path.Combine(downloadPath, "Decrypted");
-                    Directory.CreateDirectory(encryptedPath);
-                    Directory.CreateDirectory(decryptedPath);
-
-                    // Save encrypted file
-                    string encryptedFileName = $"{fileName}.encrypted";
-                    string encryptedFilePath = Path.Combine(encryptedPath, encryptedFileName);
-                    encryptedFilePath = GetUniqueFilePath(encryptedFilePath);
-                    await File.WriteAllBytesAsync(encryptedFilePath, buffer);
-
-                    // Save decrypted file
-                    string decryptedFilePath = Path.Combine(decryptedPath, fileName);
-                    decryptedFilePath = GetUniqueFilePath(decryptedFilePath);
-                    await File.WriteAllBytesAsync(decryptedFilePath, fileContent);
-
-                    // Add to download history with both paths
-                    string historyEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} | {fileName} | Encrypted: {encryptedFilePath} | Decrypted: {decryptedFilePath}";
-                    string historyPath = Path.Combine(Application.StartupPath, "DownloadHistory.txt");
-                    await File.AppendAllTextAsync(historyPath, historyEntry + Environment.NewLine);
-
-                    this.Invoke(() =>
-                    {
-                        var result = MessageBox.Show(
-                            $"File saved:\nEncrypted: {encryptedFilePath}\nDecrypted: {decryptedFilePath}\n\nDo you want to open the decrypted file?",
-                            "File Received",
-                            MessageBoxButtons.YesNo,
-                            MessageBoxIcon.Information);
-
-                        if (result == DialogResult.Yes)
-                        {
-                            try
-                            {
-                                var startInfo = new System.Diagnostics.ProcessStartInfo
-                                {
-                                    FileName = decryptedFilePath,
-                                    UseShellExecute = true
-                                };
-                                System.Diagnostics.Process.Start(startInfo);
-                            }
-                            catch (Exception ex)
-                            {
-                                MessageBox.Show($"Error opening file: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                            }
-                        }
-                    });
-                }
-                else
-                {
-                    // Validate block size for message
-                    if (totalSize < 17) // At least 1 byte flag + 16 bytes data
-                        return;
-
-                    // Calculate number of blocks (excluding the flag byte)
-                    int numBlocks = (totalSize - 1) / 16;
-                    uint[][] encryptedBlocks = new uint[numBlocks][];
-
-                    for (int i = 0; i < numBlocks; i++)
-                    {
-                        encryptedBlocks[i] = new uint[4];
-                        Buffer.BlockCopy(buffer, 1 + (i * 16), encryptedBlocks[i], 0, 16);
-                    }
-
-                    string message = Aes256Helper.DecryptCBC(encryptedBlocks, encryptionKey);
-
-                    this.Invoke(() =>
-                    {
-                        MessageBox.Show($"Message received: {message}", "Message Received", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    });
-                }
+                int read = await stream.ReadAsync(buffer, bytesRead, totalSize - bytesRead);
+                if (read == 0) break;
+                bytesRead += read;
             }
-        }
-        catch (Exception ex)
-        {
-            this.Invoke(() =>
+
+            // Validate read size
+            if (bytesRead < totalSize)
+                return;
+
+            // Check if it's a file
+            bool isFile = buffer[0] == 1;
+
+            if (isFile)
             {
-                MessageBox.Show($"Error handling received data: {ex.Message}");
-            });
+                // Read file name length and file name
+                int fileNameLength = BitConverter.ToInt32(buffer, 1);
+                string fileName = Encoding.UTF8.GetString(buffer, 5, fileNameLength);
+
+                // Get encrypted blocks
+                int encryptedDataStart = 5 + fileNameLength;
+                int encryptedDataLength = totalSize - encryptedDataStart;
+                uint[][] encryptedBlocks = new uint[encryptedDataLength / 16][];
+
+                for (int i = 0; i < encryptedBlocks.Length; i++)
+                {
+                    encryptedBlocks[i] = new uint[4];
+                    Buffer.BlockCopy(buffer, encryptedDataStart + (i * 16), encryptedBlocks[i], 0, 16);
+                }
+
+                // Decrypt data
+                string base64Content = Aes256Helper.DecryptCBC(encryptedBlocks, encryptionKey);
+                byte[] fileContent = Convert.FromBase64String(base64Content);
+
+                // Create encrypted and decrypted folders
+                string encryptedPath = Path.Combine(downloadPath, "Encrypted");
+                string decryptedPath = Path.Combine(downloadPath, "Decrypted");
+                Directory.CreateDirectory(encryptedPath);
+                Directory.CreateDirectory(decryptedPath);
+
+                // Save encrypted file
+                string encryptedFileName = $"{fileName}.encrypted";
+                string encryptedFilePath = Path.Combine(encryptedPath, encryptedFileName);
+                encryptedFilePath = GetUniqueFilePath(encryptedFilePath);
+                await File.WriteAllBytesAsync(encryptedFilePath, buffer);
+
+                // Save decrypted file
+                string decryptedFilePath = Path.Combine(decryptedPath, fileName);
+                decryptedFilePath = GetUniqueFilePath(decryptedFilePath);
+                await File.WriteAllBytesAsync(decryptedFilePath, fileContent);
+
+                // Add to download history with both paths
+                string historyEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} | {fileName} | Encrypted: {encryptedFilePath} | Decrypted: {decryptedFilePath}";
+                string historyPath = Path.Combine(Application.StartupPath, "DownloadHistory.txt");
+                await File.AppendAllTextAsync(historyPath, historyEntry + Environment.NewLine);
+
+                this.Invoke(() =>
+                {
+                    var result = MessageBox.Show(
+                        $"File saved:\nEncrypted: {encryptedFilePath}\nDecrypted: {decryptedFilePath}\n\nDo you want to open the decrypted file?",
+                        "File Received",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Information);
+
+                    if (result == DialogResult.Yes)
+                    {
+                        try
+                        {
+                            var startInfo = new System.Diagnostics.ProcessStartInfo
+                            {
+                                FileName = decryptedFilePath,
+                                UseShellExecute = true
+                            };
+                            System.Diagnostics.Process.Start(startInfo);
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show($"Error opening file: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
+                });
+            }
+            else
+            {
+                // Validate block size for message
+                if (totalSize < 17) // At least 1 byte flag + 16 bytes data
+                    return;
+
+                // Calculate number of blocks (excluding the flag byte)
+                int numBlocks = (totalSize - 1) / 16;
+                uint[][] encryptedBlocks = new uint[numBlocks][];
+
+                for (int i = 0; i < numBlocks; i++)
+                {
+                    encryptedBlocks[i] = new uint[4];
+                    Buffer.BlockCopy(buffer, 1 + (i * 16), encryptedBlocks[i], 0, 16);
+                }
+
+                string message = Aes256Helper.DecryptCBC(encryptedBlocks, encryptionKey);
+
+                this.Invoke(() =>
+                {
+                    MessageBox.Show($"Message received: {message}", "Message Received", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                });
+            }
         }
     }
 
@@ -551,24 +541,27 @@ public partial class Form1 : Form
 
     private async Task<string> GetDeviceNameAsync(string ip)
     {
-        try
+        using (var client = new TcpClient())
         {
-            using (var client = new TcpClient())
+            await client.ConnectAsync(ip, DEFAULT_PORT);
+            using (NetworkStream stream = client.GetStream())
             {
-                await client.ConnectAsync(ip, DEFAULT_PORT);
-                using (NetworkStream stream = client.GetStream())
+                // Set a read timeout to avoid hanging indefinitely
+                stream.ReadTimeout = 1000; // 1 second timeout
+
+                // Read the device name sent by the client
+                byte[] buffer = new byte[256];
+                int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+                if (bytesRead > 0)
                 {
-                    // Read the device name sent by the client
-                    byte[] buffer = new byte[256];
-                    int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
                     string deviceName = Encoding.UTF8.GetString(buffer, 0, bytesRead);
                     return string.IsNullOrWhiteSpace(deviceName) ? $"Device at {ip}" : deviceName;
                 }
+                else
+                {
+                    return $"Device at {ip}";
+                }
             }
-        }
-        catch
-        {
-            return $"Unknown Device ({ip})";
         }
     }
 
@@ -672,6 +665,20 @@ public partial class Form1 : Form
         menu.Items.Add(randomNameItem);
 
         menu.Show(lblDeviceName, new Point(0, lblDeviceName.Height));
+    }
+
+    private void LblInformation_Click(object? sender, EventArgs e)
+    {
+        try
+        {
+            string localIp = GetLocalIPAddress();
+            string info = $"Name: {randomName}\nHost: {localIp}\nPort: {DEFAULT_PORT}";
+            MessageBox.Show(info, "Device Information", MessageBoxButtons.OK, MessageBoxIcon.Information);
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error retrieving information: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
     }
 
     private class DeviceItem
