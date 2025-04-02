@@ -83,6 +83,16 @@ namespace AES2.Properties {
         /// <summary>
         ///   Looks up a localized resource of type System.Drawing.Bitmap.
         /// </summary>
+        internal static System.Drawing.Bitmap infor_30 {
+            get {
+                object obj = ResourceManager.GetObject("infor_30", resourceCulture);
+                return ((System.Drawing.Bitmap)(obj));
+            }
+        }
+        
+        /// <summary>
+        ///   Looks up a localized resource of type System.Drawing.Bitmap.
+        /// </summary>
         internal static System.Drawing.Bitmap security_aes {
             get {
                 object obj = ResourceManager.GetObject("security-aes", resourceCulture);
