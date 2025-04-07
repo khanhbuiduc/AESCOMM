@@ -183,17 +183,16 @@ partial class Form1
         // 
         txtEncryptionKey.Location = new Point(215, 150);
         txtEncryptionKey.Name = "txtEncryptionKey";
+        txtEncryptionKey.PlaceholderText = "Enter 64 hex characters (256-bit key)";
         txtEncryptionKey.Size = new Size(260, 23);
         txtEncryptionKey.TabIndex = 14;
-        txtEncryptionKey.PlaceholderText = "Enter 64 hex characters (256-bit key)";
         // 
         // txtMessage
         // 
-        txtMessage.Location = new Point(28, 50);
+        txtMessage.Location = new Point(215, 196);
         txtMessage.Margin = new Padding(3, 2, 3, 2);
-        txtMessage.Multiline = true;
         txtMessage.Name = "txtMessage";
-        txtMessage.Size = new Size(168, 169);
+        txtMessage.Size = new Size(168, 23);
         txtMessage.TabIndex = 0;
         // 
         // btnSend
@@ -238,10 +237,10 @@ partial class Form1
         btnSelectFile.BackColor = SystemColors.ControlDark;
         btnSelectFile.Font = new Font("Segoe UI", 9F, FontStyle.Bold, GraphicsUnit.Point, 0);
         btnSelectFile.ForeColor = SystemColors.Window;
-        btnSelectFile.Location = new Point(28, 223);
+        btnSelectFile.Location = new Point(389, 196);
         btnSelectFile.Margin = new Padding(3, 2, 3, 2);
         btnSelectFile.Name = "btnSelectFile";
-        btnSelectFile.Size = new Size(168, 35);
+        btnSelectFile.Size = new Size(94, 28);
         btnSelectFile.TabIndex = 8;
         btnSelectFile.Text = "Select File";
         btnSelectFile.UseVisualStyleBackColor = false;
@@ -257,7 +256,7 @@ partial class Form1
         // 
         // txtHost
         // 
-        txtHost.Location = new Point(275, 50);
+        txtHost.Location = new Point(275, 47);
         txtHost.Name = "txtHost";
         txtHost.Size = new Size(200, 23);
         txtHost.TabIndex = 10;
@@ -310,7 +309,7 @@ partial class Form1
         lblSelectedFile.AutoSize = true;
         lblSelectedFile.Location = new Point(215, 100);
         lblSelectedFile.Name = "lblSelectedFile";
-        lblSelectedFile.Size = new Size(126, 15);
+        lblSelectedFile.Size = new Size(144, 15);
         lblSelectedFile.TabIndex = 3;
         lblSelectedFile.Text = "No encrypted file selected";
         // 
@@ -331,7 +330,7 @@ partial class Form1
         lblDecryptionKey.AutoSize = true;
         lblDecryptionKey.Location = new Point(215, 140);
         lblDecryptionKey.Name = "lblDecryptionKey";
-        lblDecryptionKey.Size = new Size(88, 15);
+        lblDecryptionKey.Size = new Size(90, 15);
         lblDecryptionKey.TabIndex = 1;
         lblDecryptionKey.Text = "Decryption Key:";
         // 
@@ -339,9 +338,9 @@ partial class Form1
         // 
         txtDecryptionKey.Location = new Point(215, 160);
         txtDecryptionKey.Name = "txtDecryptionKey";
+        txtDecryptionKey.PlaceholderText = "Enter 64 hex characters (256-bit key)";
         txtDecryptionKey.Size = new Size(260, 23);
         txtDecryptionKey.TabIndex = 0;
-        txtDecryptionKey.PlaceholderText = "Enter 64 hex characters (256-bit key)";
         // 
         // Form1
         // 
