@@ -10,16 +10,19 @@ public partial class Form1 : Form
     private TcpListener? tcpListener;
     private bool isListening = false;
     private CancellationTokenSource? cts;
-    private uint[] encryptionKey; // Store encryption key
+    private uint[]? encryptionKey; // Changed to nullable since it will be set by user
     private readonly string downloadPath;
     private string selectedFilePath = string.Empty;
     private string randomName;
+    private string selectedEncryptedFilePath = string.Empty;
 
     public Form1()
     {
         InitializeComponent();
         btnSend.Click += BtnSend_Click;
         lblDeviceName.Click += LblDeviceName_Click;
+        btnDecrypt.Click += BtnDecrypt_Click;
+        btnSelectEncrypted.Click += BtnSelectEncrypted_Click;
 
         // Load saved name or generate a new one
         LoadSavedName();
@@ -37,13 +40,6 @@ public partial class Form1 : Form
         {
             // If logo loading fails, continue without image
         }
-
-        // Generate random key for AES-256
-        encryptionKey = new uint[]
-        {
-            0x00010203, 0x04050607, 0x08090a0b, 0x0c0d0e0f,
-            0x10111213, 0x14151617, 0x18191a1b, 0x1c1d1e1f
-        };
 
         // Create download directory and start listening
         downloadPath = Path.Combine(Application.StartupPath, "Downloads");
@@ -360,6 +356,24 @@ public partial class Form1 : Form
                 return;
             }
 
+            // Get encryption key from user input
+            if (string.IsNullOrWhiteSpace(txtEncryptionKey.Text))
+            {
+                MessageBox.Show("Please enter an encryption key");
+                return;
+            }
+
+            // Parse the encryption key from hexadecimal input
+            try
+            {
+                encryptionKey = ParseEncryptionKey(txtEncryptionKey.Text);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Invalid encryption key format: {ex.Message}\nPlease use a valid 256-bit key (64 hex characters).");
+                return;
+            }
+
             string message;
             byte[] fileNameBytes = Array.Empty<byte>();
             byte[] fileContentBytes = Array.Empty<byte>();
@@ -447,6 +461,171 @@ public partial class Form1 : Form
         }
     }
 
+    // New method to handle decryption of selected file
+    private void BtnDecrypt_Click(object? sender, EventArgs e)
+    {
+        try
+        {
+            if (string.IsNullOrEmpty(selectedEncryptedFilePath))
+            {
+                MessageBox.Show("Please select an encrypted file first");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(txtDecryptionKey.Text))
+            {
+                MessageBox.Show("Please enter a decryption key");
+                return;
+            }
+
+            // Parse the decryption key from hexadecimal input
+            uint[] decryptionKey;
+            try
+            {
+                decryptionKey = ParseEncryptionKey(txtDecryptionKey.Text);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Invalid key format: {ex.Message}\nPlease use a valid 256-bit key (64 hex characters).");
+                return;
+            }
+
+            // Read the encrypted file
+            byte[] encryptedData = File.ReadAllBytes(selectedEncryptedFilePath);
+
+            // Parse the file format
+            using (var ms = new MemoryStream(encryptedData))
+            using (var reader = new BinaryReader(ms))
+            {
+                int totalLength = reader.ReadInt32();
+                bool isFile = reader.ReadByte() == 1;
+
+                if (isFile)
+                {
+                    // Read filename
+                    int fileNameLength = reader.ReadInt32();
+                    string fileName = Encoding.UTF8.GetString(reader.ReadBytes(fileNameLength));
+
+                    // Get encrypted blocks
+                    int encryptedDataLength = totalLength - (1 + 4 + fileNameLength);
+                    int numBlocks = encryptedDataLength / 16;
+                    uint[][] encryptedBlocks = new uint[numBlocks][];
+
+                    for (int i = 0; i < numBlocks; i++)
+                    {
+                        encryptedBlocks[i] = new uint[4];
+                        byte[] blockBytes = reader.ReadBytes(16);
+                        Buffer.BlockCopy(blockBytes, 0, encryptedBlocks[i], 0, 16);
+                    }
+
+                    try
+                    {
+                        // Decrypt data
+                        string base64Content = Aes256Helper.DecryptCBC(encryptedBlocks, decryptionKey);
+                        byte[] fileContent = Convert.FromBase64String(base64Content);
+
+                        // Save decrypted file
+                        string decryptedPath = Path.Combine(downloadPath, "Decrypted");
+                        Directory.CreateDirectory(decryptedPath);
+                        string decryptedFilePath = Path.Combine(decryptedPath, fileName);
+                        decryptedFilePath = GetUniqueFilePath(decryptedFilePath);
+                        File.WriteAllBytes(decryptedFilePath, fileContent);
+
+                        var result = MessageBox.Show(
+                            $"File decrypted successfully and saved to:\n{decryptedFilePath}\n\nDo you want to open the file?",
+                            "Decryption Successful",
+                            MessageBoxButtons.YesNo,
+                            MessageBoxIcon.Information);
+
+                        if (result == DialogResult.Yes)
+                        {
+                            var startInfo = new System.Diagnostics.ProcessStartInfo
+                            {
+                                FileName = decryptedFilePath,
+                                UseShellExecute = true
+                            };
+                            System.Diagnostics.Process.Start(startInfo);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Decryption failed: {ex.Message}\nThis could be due to an incorrect decryption key.",
+                            "Decryption Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+                else
+                {
+                    // Plain message decryption
+                    int encryptedDataLength = totalLength - 1;
+                    int numBlocks = encryptedDataLength / 16;
+                    uint[][] encryptedBlocks = new uint[numBlocks][];
+
+                    for (int i = 0; i < numBlocks; i++)
+                    {
+                        encryptedBlocks[i] = new uint[4];
+                        byte[] blockBytes = reader.ReadBytes(16);
+                        Buffer.BlockCopy(blockBytes, 0, encryptedBlocks[i], 0, 16);
+                    }
+
+                    try
+                    {
+                        string message = Aes256Helper.DecryptCBC(encryptedBlocks, decryptionKey);
+                        MessageBox.Show($"Decrypted message: {message}", "Message Decrypted", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"Decryption failed: {ex.Message}\nThis could be due to an incorrect decryption key.",
+                            "Decryption Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Error during decryption: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+    }
+
+    private void BtnSelectEncrypted_Click(object? sender, EventArgs e)
+    {
+        using (OpenFileDialog openFileDialog = new OpenFileDialog())
+        {
+            openFileDialog.Filter = "Encrypted files (*.encrypted)|*.encrypted|All files (*.*)|*.*";
+            openFileDialog.FilterIndex = 1;
+
+            if (openFileDialog.ShowDialog() == DialogResult.OK)
+            {
+                selectedEncryptedFilePath = openFileDialog.FileName;
+                lblSelectedFile.Text = Path.GetFileName(selectedEncryptedFilePath);
+            }
+        }
+    }
+
+    // Helper method to parse encryption key from hexadecimal string
+    private uint[] ParseEncryptionKey(string keyText)
+    {
+        // Remove any spaces and ensure lowercase for consistency
+        keyText = keyText.Replace(" ", "").ToLower();
+
+        // Check if it's a valid hex string
+        if (!System.Text.RegularExpressions.Regex.IsMatch(keyText, "^[0-9a-f]+$"))
+            throw new ArgumentException("Key must contain only hexadecimal characters (0-9, a-f)");
+
+        // Key must be 256 bits (32 bytes or 64 hex chars) for AES-256
+        if (keyText.Length != 64)
+            throw new ArgumentException($"Key must be exactly 64 hexadecimal characters (256 bits), got {keyText.Length}");
+
+        uint[] key = new uint[8]; // 8 uint values for a 256-bit key
+
+        for (int i = 0; i < 8; i++)
+        {
+            string chunk = keyText.Substring(i * 8, 8);
+            key[i] = Convert.ToUInt32(chunk, 16);
+        }
+
+        return key;
+    }
+
     protected override void OnFormClosing(FormClosingEventArgs e)
     {
         StopListening();
@@ -519,7 +698,7 @@ public partial class Form1 : Form
             using (var client = new TcpClient())
             {
                 var connectTask = client.ConnectAsync(ip, DEFAULT_PORT);
-                if (await Task.WhenAny(connectTask, Task.Delay(100)) == connectTask)
+                if (await Task.WhenAny(connectTask, Task.Delay(1000)) == connectTask)
                 {
                     if (client.Connected)
                     {
