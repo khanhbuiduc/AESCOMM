@@ -7,6 +7,9 @@ namespace AES2;
 public partial class Form1 : Form
 {
     private const int DEFAULT_PORT = 5001;
+    private const byte AES_TYPE_256 = 1;
+    private const byte AES_TYPE_192 = 2;
+    private const byte AES_TYPE_128 = 3;
     private TcpListener? tcpListener;
     private bool isListening = false;
     private CancellationTokenSource? cts;
@@ -24,22 +27,30 @@ public partial class Form1 : Form
         btnDecrypt.Click += BtnDecrypt_Click;
         btnSelectEncrypted.Click += BtnSelectEncrypted_Click;
 
+        // Add event handlers for radio buttons
+        radioAes256.CheckedChanged += RadioAesType_CheckedChanged;
+        radioAes192.CheckedChanged += RadioAesType_CheckedChanged;
+        radioAes128.CheckedChanged += RadioAesType_CheckedChanged;
+
+        // Set default placeholder text for AES-256
+        txtEncryptionKey.PlaceholderText = "Enter 64 hex characters (256-bit key)";
+
         // Load saved name or generate a new one
         LoadSavedName();
 
-        // Load logo
-        try
-        {
-            string logoPath = Path.Combine(Application.StartupPath, "logo.png");
-            if (File.Exists(logoPath))
-            {
-                logoPictureBox.Image = Image.FromFile(logoPath);
-            }
-        }
-        catch
-        {
-            // If logo loading fails, continue without image
-        }
+        // // Load logo
+        // try
+        // {
+        //     string logoPath = Path.Combine(Application.StartupPath, "logo.png");
+        //     if (File.Exists(logoPath))
+        //     {
+        //         logoPictureBox.Image = Image.FromFile(logoPath);
+        //     }
+        // }
+        // catch
+        // {
+        //     // If logo loading fails, continue without image
+        // }
 
         // Create download directory and start listening
         downloadPath = Path.Combine(Application.StartupPath, "Downloads");
@@ -200,177 +211,85 @@ public partial class Form1 : Form
         using (client)
         using (NetworkStream stream = client.GetStream())
         {
-            try
+            // Read total size first
+            byte[] sizeBuffer = new byte[4];
+            await stream.ReadAsync(sizeBuffer, 0, 4);
+            int totalSize = BitConverter.ToInt32(sizeBuffer);
+
+            // Validate size
+            if (totalSize <= 0)
+                return;
+
+            // Read data
+            byte[] buffer = new byte[totalSize];
+            int bytesRead = 0;
+            while (bytesRead < totalSize)
             {
-                // Read total size first
-                byte[] sizeBuffer = new byte[4];
-                await stream.ReadAsync(sizeBuffer, 0, 4);
-                int totalSize = BitConverter.ToInt32(sizeBuffer);
+                int read = await stream.ReadAsync(buffer, bytesRead, totalSize - bytesRead);
+                if (read == 0) break;
+                bytesRead += read;
+            }
 
-                // Validate size
-                if (totalSize <= 0)
-                    return;
+            // Validate read size
+            if (bytesRead < totalSize)
+                return;
 
-                // Read data
-                byte[] buffer = new byte[totalSize];
-                int bytesRead = 0;
-                while (bytesRead < totalSize)
+            // Check if it's a file and get AES type
+            bool isFile = buffer[0] == 1;
+            byte aesType = buffer[1];
+
+            if (isFile)
+            {
+                // Read file name length and file name
+                int fileNameLength = BitConverter.ToInt32(buffer, 2);
+                string fileName = Encoding.UTF8.GetString(buffer, 6, fileNameLength);
+
+                // Extract encrypted blocks
+                int encryptedDataStart = 6 + fileNameLength;
+                int encryptedDataLength = totalSize - encryptedDataStart;
+
+                // Create Base64 representation of the encrypted data
+                byte[] encryptedPortion = new byte[encryptedDataLength];
+                Buffer.BlockCopy(buffer, encryptedDataStart, encryptedPortion, 0, encryptedDataLength);
+                string base64EncryptedData = Convert.ToBase64String(encryptedPortion);
+
+                // Create encrypted folder and save encrypted file as Base64
+                string encryptedPath = Path.Combine(downloadPath, "Encrypted");
+                Directory.CreateDirectory(encryptedPath);
+                string encryptedFileName = $"{fileName}";
+                string encryptedFilePath = Path.Combine(encryptedPath, encryptedFileName);
+                encryptedFilePath = GetUniqueFilePath(encryptedFilePath);
+
+                // Save file metadata and Base64 content
+                using (var writer = new StreamWriter(encryptedFilePath))
                 {
-                    int read = await stream.ReadAsync(buffer, bytesRead, totalSize - bytesRead);
-                    if (read == 0) break;
-                    bytesRead += read;
+                    // Write file information as a small header
+                    writer.WriteLine($"FILENAME:{fileName}");
+                    writer.WriteLine($"TIMESTAMP:{DateTime.Now:yyyy-MM-dd HH:mm:ss}");
+                    writer.WriteLine($"ENCRYPTED_SIZE:{encryptedDataLength}");
+                    writer.WriteLine($"AES_TYPE:{aesType}");
+                    writer.WriteLine("---BEGIN ENCRYPTED DATA---");
+                    writer.WriteLine(base64EncryptedData);
+                    writer.WriteLine("---END ENCRYPTED DATA---");
                 }
 
-                // Validate read size
-                if (bytesRead < totalSize)
-                    return;
+                // Add to history
+                string historyEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} | {fileName} | Encrypted: {encryptedFilePath}";
+                string historyPath = Path.Combine(Application.StartupPath, "DownloadHistory.txt");
+                await File.AppendAllTextAsync(historyPath, historyEntry + Environment.NewLine);
 
-                // Check if it's a file
-                bool isFile = buffer[0] == 1;
-
-                if (isFile)
+                // Ask user if they want to decrypt now
+                await this.Invoke(async () =>
                 {
-                    // Read file name length and file name
-                    int fileNameLength = BitConverter.ToInt32(buffer, 1);
-                    string fileName = Encoding.UTF8.GetString(buffer, 5, fileNameLength);
+                    var result = MessageBox.Show(
+                        $"Encrypted file saved to: {encryptedFilePath}\n\nDo you want to decrypt it now?",
+                        "File Received",
+                        MessageBoxButtons.YesNo,
+                        MessageBoxIcon.Question);
 
-                    // Extract encrypted blocks
-                    int encryptedDataStart = 5 + fileNameLength;
-                    int encryptedDataLength = totalSize - encryptedDataStart;
-
-                    // Create Base64 representation of the encrypted data
-                    byte[] encryptedPortion = new byte[encryptedDataLength];
-                    Buffer.BlockCopy(buffer, encryptedDataStart, encryptedPortion, 0, encryptedDataLength);
-                    string base64EncryptedData = Convert.ToBase64String(encryptedPortion);
-
-                    // Create encrypted folder and save encrypted file as Base64
-                    string encryptedPath = Path.Combine(downloadPath, "Encrypted");
-                    Directory.CreateDirectory(encryptedPath);
-                    string encryptedFileName = $"{fileName}";
-                    string encryptedFilePath = Path.Combine(encryptedPath, encryptedFileName);
-                    encryptedFilePath = GetUniqueFilePath(encryptedFilePath);
-
-                    // Save file metadata and Base64 content
-                    using (var writer = new StreamWriter(encryptedFilePath))
+                    if (result == DialogResult.Yes)
                     {
-                        // Write file information as a small header
-                        writer.WriteLine($"FILENAME:{fileName}");
-                        writer.WriteLine($"TIMESTAMP:{DateTime.Now:yyyy-MM-dd HH:mm:ss}");
-                        writer.WriteLine($"ENCRYPTED_SIZE:{encryptedDataLength}");
-                        writer.WriteLine("---BEGIN ENCRYPTED DATA---");
-                        writer.WriteLine(base64EncryptedData);
-                        writer.WriteLine("---END ENCRYPTED DATA---");
-                    }
-
-                    // Add to history
-                    string historyEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} | {fileName} | Encrypted: {encryptedFilePath}";
-                    string historyPath = Path.Combine(Application.StartupPath, "DownloadHistory.txt");
-                    await File.AppendAllTextAsync(historyPath, historyEntry + Environment.NewLine);
-
-                    // Ask user if they want to decrypt now
-                    await this.Invoke(async () =>
-                    {
-                        var result = MessageBox.Show(
-                            $"Encrypted file saved to: {encryptedFilePath}\n\nDo you want to decrypt it now?",
-                            "File Received",
-                            MessageBoxButtons.YesNo,
-                            MessageBoxIcon.Question);
-
-                        if (result == DialogResult.Yes)
-                        {
-                            // Prompt user for decryption key
-                            using (var keyForm = new Form())
-                            {
-                                keyForm.Text = "Enter Decryption Key";
-                                keyForm.Size = new Size(400, 150);
-                                keyForm.FormBorderStyle = FormBorderStyle.FixedDialog;
-                                keyForm.StartPosition = FormStartPosition.CenterParent;
-                                keyForm.MaximizeBox = false;
-                                keyForm.MinimizeBox = false;
-
-                                var keyLabel = new Label() { Text = "Decryption Key:", AutoSize = true, Location = new Point(10, 20) };
-                                var keyTextBox = new TextBox() { Width = 360, Location = new Point(10, 50) };
-                                keyTextBox.PlaceholderText = "Enter 64 hex characters (256-bit key)";
-
-                                var okButton = new Button() { Text = "Decrypt", DialogResult = DialogResult.OK, Location = new Point(200, 80) };
-                                var cancelButton = new Button() { Text = "Cancel", DialogResult = DialogResult.Cancel, Location = new Point(280, 80) };
-
-                                keyForm.Controls.AddRange(new Control[] { keyLabel, keyTextBox, okButton, cancelButton });
-                                keyForm.AcceptButton = okButton;
-                                keyForm.CancelButton = cancelButton;
-
-                                if (keyForm.ShowDialog() == DialogResult.OK && !string.IsNullOrWhiteSpace(keyTextBox.Text))
-                                {
-                                    try
-                                    {
-                                        uint[] decryptionKey = ParseEncryptionKey(keyTextBox.Text);
-
-                                        // Process the encrypted blocks from the saved Base64 format
-                                        string base64Content = await ReadEncryptedBase64ContentAsync(encryptedFilePath);
-                                        byte[] encryptedBytes = Convert.FromBase64String(base64Content);
-
-                                        // Convert to blocks format
-                                        int numBlocks = encryptedBytes.Length / 16;
-                                        uint[][] encryptedBlocks = new uint[numBlocks][];
-
-                                        for (int i = 0; i < numBlocks; i++)
-                                        {
-                                            encryptedBlocks[i] = new uint[4];
-                                            Buffer.BlockCopy(encryptedBytes, i * 16, encryptedBlocks[i], 0, 16);
-                                        }
-
-                                        // Decrypt data
-                                        string base64FileContent = Aes256Helper.DecryptCBC(encryptedBlocks, decryptionKey);
-                                        byte[] fileContent = Convert.FromBase64String(base64FileContent);
-
-                                        // Save decrypted file
-                                        string decryptedPath = Path.Combine(downloadPath, "Decrypted");
-                                        Directory.CreateDirectory(decryptedPath);
-                                        string decryptedFilePath = Path.Combine(decryptedPath, fileName);
-                                        decryptedFilePath = GetUniqueFilePath(decryptedFilePath);
-                                        await File.WriteAllBytesAsync(decryptedFilePath, fileContent);
-
-                                        // Update history
-                                        historyEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} | {fileName} | Encrypted: {encryptedFilePath} | Decrypted: {decryptedFilePath}";
-                                        await File.AppendAllTextAsync(historyPath, historyEntry + Environment.NewLine);
-
-                                        var openResult = MessageBox.Show(
-                                            $"File decrypted successfully and saved to:\n{decryptedFilePath}\n\nDo you want to open the file?",
-                                            "Decryption Successful",
-                                            MessageBoxButtons.YesNo,
-                                            MessageBoxIcon.Information);
-
-                                        if (openResult == DialogResult.Yes)
-                                        {
-                                            try
-                                            {
-                                                var startInfo = new System.Diagnostics.ProcessStartInfo
-                                                {
-                                                    FileName = decryptedFilePath,
-                                                    UseShellExecute = true
-                                                };
-                                                System.Diagnostics.Process.Start(startInfo);
-                                            }
-                                            catch (Exception ex)
-                                            {
-                                                MessageBox.Show($"Error opening file: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                                            }
-                                        }
-                                    }
-                                    catch (Exception ex)
-                                    {
-                                        MessageBox.Show($"Decryption failed: {ex.Message}", "Decryption Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                                    }
-                                }
-                            }
-                        }
-                    });
-                }
-                else
-                {
-                    // For messages, prompt for the decryption key
-                    this.Invoke(() =>
-                    {
+                        // Prompt user for decryption key
                         using (var keyForm = new Form())
                         {
                             keyForm.Text = "Enter Decryption Key";
@@ -382,7 +301,23 @@ public partial class Form1 : Form
 
                             var keyLabel = new Label() { Text = "Decryption Key:", AutoSize = true, Location = new Point(10, 20) };
                             var keyTextBox = new TextBox() { Width = 360, Location = new Point(10, 50) };
-                            keyTextBox.PlaceholderText = "Enter 64 hex characters (256-bit key)";
+
+                            // Set appropriate placeholder text based on AES type
+                            switch (aesType)
+                            {
+                                case AES_TYPE_256:
+                                    keyTextBox.PlaceholderText = "Enter 64 hex characters (256-bit key)";
+                                    break;
+                                case AES_TYPE_192:
+                                    keyTextBox.PlaceholderText = "Enter 48 hex characters (192-bit key)";
+                                    break;
+                                case AES_TYPE_128:
+                                    keyTextBox.PlaceholderText = "Enter 32 hex characters (128-bit key)";
+                                    break;
+                                default:
+                                    keyTextBox.PlaceholderText = "Enter encryption key in hex format";
+                                    break;
+                            }
 
                             var okButton = new Button() { Text = "Decrypt", DialogResult = DialogResult.OK, Location = new Point(200, 80) };
                             var cancelButton = new Button() { Text = "Cancel", DialogResult = DialogResult.Cancel, Location = new Point(280, 80) };
@@ -397,18 +332,78 @@ public partial class Form1 : Form
                                 {
                                     uint[] decryptionKey = ParseEncryptionKey(keyTextBox.Text);
 
-                                    // Calculate number of blocks (excluding the flag byte)
-                                    int numBlocks = (totalSize - 1) / 16;
+                                    // Process the encrypted blocks from the saved Base64 format
+                                    string base64Content = await ReadEncryptedBase64ContentAsync(encryptedFilePath);
+                                    byte[] encryptedBytes = Convert.FromBase64String(base64Content);
+
+                                    // Convert to blocks format
+                                    int numBlocks = encryptedBytes.Length / 16;
                                     uint[][] encryptedBlocks = new uint[numBlocks][];
 
                                     for (int i = 0; i < numBlocks; i++)
                                     {
                                         encryptedBlocks[i] = new uint[4];
-                                        Buffer.BlockCopy(buffer, 1 + (i * 16), encryptedBlocks[i], 0, 16);
+                                        for (int j = 0; j < 4; j++)
+                                        {
+                                            byte[] wordBytes = new byte[4];
+                                            Buffer.BlockCopy(encryptedBytes, i * 16 + j * 4, wordBytes, 0, 4);
+                                            encryptedBlocks[i][j] = BitConverter.ToUInt32(wordBytes, 0);
+                                        }
                                     }
 
-                                    string message = Aes256Helper.DecryptCBC(encryptedBlocks, decryptionKey);
-                                    MessageBox.Show($"Message received: {message}", "Message Received", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                                    // Decrypt data using the appropriate AES type
+                                    string base64FileContent;
+                                    switch (aesType)
+                                    {
+                                        case AES_TYPE_256:
+                                            base64FileContent = AES256CBC.DecryptCBC(encryptedBlocks, decryptionKey);
+                                            break;
+                                        case AES_TYPE_192:
+                                            base64FileContent = Aes192Helper.DecryptCBC(encryptedBlocks, decryptionKey);
+                                            break;
+                                        case AES_TYPE_128:
+                                            base64FileContent = Aes128Helper.DecryptCBC(encryptedBlocks, decryptionKey);
+                                            break;
+                                        default:
+                                            base64FileContent = AES256CBC.DecryptCBC(encryptedBlocks, decryptionKey);
+                                            break;
+                                    }
+
+                                    byte[] fileContent = Convert.FromBase64String(base64FileContent);
+
+                                    // Save decrypted file
+                                    string decryptedPath = Path.Combine(downloadPath, "Decrypted");
+                                    Directory.CreateDirectory(decryptedPath);
+                                    string decryptedFilePath = Path.Combine(decryptedPath, fileName);
+                                    decryptedFilePath = GetUniqueFilePath(decryptedFilePath);
+                                    await File.WriteAllBytesAsync(decryptedFilePath, fileContent);
+
+                                    // Update history
+                                    historyEntry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss} | {fileName} | Encrypted: {encryptedFilePath} | Decrypted: {decryptedFilePath}";
+                                    await File.AppendAllTextAsync(historyPath, historyEntry + Environment.NewLine);
+
+                                    var openResult = MessageBox.Show(
+                                        $"File decrypted successfully and saved to:\n{decryptedFilePath}\n\nDo you want to open the file?",
+                                        "Decryption Successful",
+                                        MessageBoxButtons.YesNo,
+                                        MessageBoxIcon.Information);
+
+                                    if (openResult == DialogResult.Yes)
+                                    {
+                                        try
+                                        {
+                                            var startInfo = new System.Diagnostics.ProcessStartInfo
+                                            {
+                                                FileName = decryptedFilePath,
+                                                UseShellExecute = true
+                                            };
+                                            System.Diagnostics.Process.Start(startInfo);
+                                        }
+                                        catch (Exception ex)
+                                        {
+                                            MessageBox.Show($"Error opening file: {ex.Message}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                                        }
+                                    }
                                 }
                                 catch (Exception ex)
                                 {
@@ -416,14 +411,95 @@ public partial class Form1 : Form
                                 }
                             }
                         }
-                    });
-                }
+                    }
+                });
             }
-            catch (Exception ex)
+            else
             {
+                // For messages, prompt for the decryption key
                 this.Invoke(() =>
                 {
-                    MessageBox.Show($"Error processing received data: {ex.Message}", "Reception Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    using (var keyForm = new Form())
+                    {
+                        keyForm.Text = "Enter Decryption Key";
+                        keyForm.Size = new Size(400, 150);
+                        keyForm.FormBorderStyle = FormBorderStyle.FixedDialog;
+                        keyForm.StartPosition = FormStartPosition.CenterParent;
+                        keyForm.MaximizeBox = false;
+                        keyForm.MinimizeBox = false;
+
+                        var keyLabel = new Label() { Text = "Decryption Key:", AutoSize = true, Location = new Point(10, 20) };
+                        var keyTextBox = new TextBox() { Width = 360, Location = new Point(10, 50) };
+
+                        // Set appropriate placeholder text based on AES type
+                        switch (aesType)
+                        {
+                            case AES_TYPE_256:
+                                keyTextBox.PlaceholderText = "Enter 64 hex characters (256-bit key)";
+                                break;
+                            case AES_TYPE_192:
+                                keyTextBox.PlaceholderText = "Enter 48 hex characters (192-bit key)";
+                                break;
+                            case AES_TYPE_128:
+                                keyTextBox.PlaceholderText = "Enter 32 hex characters (128-bit key)";
+                                break;
+                            default:
+                                keyTextBox.PlaceholderText = "Enter encryption key in hex format";
+                                break;
+                        }
+
+                        var okButton = new Button() { Text = "Decrypt", DialogResult = DialogResult.OK, Location = new Point(200, 80) };
+                        var cancelButton = new Button() { Text = "Cancel", DialogResult = DialogResult.Cancel, Location = new Point(280, 80) };
+
+                        keyForm.Controls.AddRange(new Control[] { keyLabel, keyTextBox, okButton, cancelButton });
+                        keyForm.AcceptButton = okButton;
+                        keyForm.CancelButton = cancelButton;
+
+                        if (keyForm.ShowDialog() == DialogResult.OK && !string.IsNullOrWhiteSpace(keyTextBox.Text))
+                        {
+                            try
+                            {
+                                uint[] decryptionKey = ParseEncryptionKey(keyTextBox.Text);
+
+                                // Calculate number of blocks (excluding the flags)
+                                int numBlocks = (totalSize - 2) / 16;
+                                uint[][] encryptedBlocks = new uint[numBlocks][];
+
+                                for (int i = 0; i < numBlocks; i++)
+                                {
+                                    encryptedBlocks[i] = new uint[4];
+                                    for (int j = 0; j < 4; j++)
+                                    {
+                                        byte[] wordBytes = new byte[4];
+                                        Buffer.BlockCopy(buffer, 2 + (i * 16) + (j * 4), wordBytes, 0, 4);
+                                        encryptedBlocks[i][j] = BitConverter.ToUInt32(wordBytes, 0);
+                                    }
+                                }
+
+                                // Decrypt message using the appropriate AES type
+                                string message;
+                                switch (aesType)
+                                {
+                                    case AES_TYPE_256:
+                                        message = AES256CBC.DecryptCBC(encryptedBlocks, decryptionKey);
+                                        break;
+                                    case AES_TYPE_192:
+                                        message = Aes192Helper.DecryptCBC(encryptedBlocks, decryptionKey);
+                                        break;
+                                    case AES_TYPE_128:
+                                        message = Aes128Helper.DecryptCBC(encryptedBlocks, decryptionKey);
+                                        break;
+                                    default:
+                                        message = AES256CBC.DecryptCBC(encryptedBlocks, decryptionKey);
+                                        break;
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                MessageBox.Show($"Decryption failed: {ex.Message}", "Decryption Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            }
+                        }
+                    }
                 });
             }
         }
@@ -491,13 +567,46 @@ public partial class Form1 : Form
             }
 
             // Parse the encryption key from hexadecimal input
+            uint[] encryptionKey;
             try
             {
+                // Use the extended version that supports different key lengths
                 encryptionKey = ParseEncryptionKey(txtEncryptionKey.Text);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Invalid encryption key format: {ex.Message}\nPlease use a valid 256-bit key (64 hex characters).");
+                MessageBox.Show($"Invalid encryption key format: {ex.Message}\nPlease use a valid key (64, 48, or 32 hex characters depending on AES type).");
+                return;
+            }
+
+            // Determine AES type and validate key length
+            byte aesType;
+            int requiredKeyLength = 0;  // In uint entries (4 bytes each)
+            string requiredHexLength = "";
+
+            if (radioAes256.Checked)
+            {
+                aesType = AES_TYPE_256;
+                requiredKeyLength = 8;  // 256 bits = 8 uints
+                requiredHexLength = "64";
+            }
+            else if (radioAes192.Checked)
+            {
+                aesType = AES_TYPE_192;
+                requiredKeyLength = 6;  // 192 bits = 6 uints
+                requiredHexLength = "48";
+            }
+            else // AES-128
+            {
+                aesType = AES_TYPE_128;
+                requiredKeyLength = 4;  // 128 bits = 4 uints
+                requiredHexLength = "32";
+            }
+
+            // Validate key length against selected AES type
+            if (encryptionKey.Length != requiredKeyLength)
+            {
+                MessageBox.Show($"Key length mismatch. Selected AES type requires {requiredHexLength} hex characters.");
                 return;
             }
 
@@ -519,9 +628,25 @@ public partial class Form1 : Form
                 message = txtMessage.Text;
             }
 
-            // Generate IV and encrypt using CBC mode
-            uint[] iv = Aes256Helper.GenerateIV();
-            uint[][] encryptedBlocks = Aes256Helper.EncryptCBC(message, encryptionKey, iv);
+            // Generate IV and encrypt using CBC mode based on selected AES type
+            uint[] iv = AES256CBC.GenerateIV(); // IV is always 128-bit
+            uint[][] encryptedBlocks;
+
+            switch (aesType)
+            {
+                case AES_TYPE_256:
+                    encryptedBlocks = AES256CBC.EncryptCBC(message, encryptionKey, iv);
+                    break;
+                case AES_TYPE_192:
+                    encryptedBlocks = Aes192Helper.EncryptCBC(message, encryptionKey, iv);
+                    break;
+                case AES_TYPE_128:
+                    encryptedBlocks = Aes128Helper.EncryptCBC(message, encryptionKey, iv);
+                    break;
+                default:
+                    encryptedBlocks = AES256CBC.EncryptCBC(message, encryptionKey, iv);
+                    break;
+            }
 
             using (TcpClient client = new TcpClient())
             {
@@ -532,8 +657,8 @@ public partial class Form1 : Form
                     byte[] dataToSend;
                     if (!string.IsNullOrEmpty(selectedFilePath))
                     {
-                        // Format: [IsFile(1)][FileNameLength(4)][FileName(var)][EncryptedData]
-                        int totalLength = 1 + 4 + fileNameBytes.Length + (encryptedBlocks.Length * 16);
+                        // Format: [IsFile(1)][AesType(1)][FileNameLength(4)][FileName(var)][EncryptedData]
+                        int totalLength = 2 + 4 + fileNameBytes.Length + (encryptedBlocks.Length * 16);
                         dataToSend = new byte[4 + totalLength]; // Total length prefix
 
                         using (var ms = new MemoryStream(dataToSend))
@@ -541,6 +666,7 @@ public partial class Form1 : Form
                         {
                             writer.Write(totalLength);
                             writer.Write((byte)1); // IsFile flag
+                            writer.Write(aesType); // AES type
                             writer.Write(fileNameBytes.Length);
                             writer.Write(fileNameBytes);
 
@@ -555,8 +681,8 @@ public partial class Form1 : Form
                     }
                     else
                     {
-                        // Format: [IsFile(1)][EncryptedData]
-                        int totalLength = 1 + (encryptedBlocks.Length * 16);
+                        // Format: [IsFile(0)][AesType(1)][EncryptedData]
+                        int totalLength = 2 + (encryptedBlocks.Length * 16);
                         dataToSend = new byte[4 + totalLength]; // Total length prefix
 
                         using (var ms = new MemoryStream(dataToSend))
@@ -564,6 +690,7 @@ public partial class Form1 : Form
                         {
                             writer.Write(totalLength);
                             writer.Write((byte)0); // IsFile flag
+                            writer.Write(aesType); // AES type
 
                             // Write encrypted blocks
                             for (int i = 0; i < encryptedBlocks.Length; i++)
@@ -586,6 +713,38 @@ public partial class Form1 : Form
         {
             MessageBox.Show($"Error sending data: {ex.Message}");
         }
+    }
+
+    // Helper method to parse encryption key from hexadecimal string
+    private uint[] ParseEncryptionKey(string keyText)
+    {
+        // Remove any spaces and ensure lowercase for consistency
+        keyText = keyText.Replace(" ", "").ToLower();
+
+        // Check if it's a valid hex string
+        if (!System.Text.RegularExpressions.Regex.IsMatch(keyText, "^[0-9a-f]+$"))
+            throw new ArgumentException("Key must contain only hexadecimal characters (0-9, a-f)");
+
+        // Determine key size based on input length
+        int keySize;
+        if (keyText.Length == 64) // 256-bit key (64 hex chars)
+            keySize = 8;  // 8 uint values
+        else if (keyText.Length == 48) // 192-bit key (48 hex chars)
+            keySize = 6;  // 6 uint values
+        else if (keyText.Length == 32) // 128-bit key (32 hex chars)
+            keySize = 4;  // 4 uint values
+        else
+            throw new ArgumentException($"Key must be 32, 48, or 64 hexadecimal characters (128, 192, or 256 bits), got {keyText.Length}");
+
+        uint[] key = new uint[keySize];
+
+        for (int i = 0; i < keySize; i++)
+        {
+            string chunk = keyText.Substring(i * 8, 8);
+            key[i] = Convert.ToUInt32(chunk, 16);
+        }
+
+        return key;
     }
 
     // New method to handle decryption of selected file
@@ -628,6 +787,7 @@ public partial class Form1 : Form
                     // Get file content and extract the relevant information
                     string fileContent = await File.ReadAllTextAsync(selectedEncryptedFilePath);
                     string fileName = ExtractHeaderValue(fileContent, "FILENAME:");
+                    byte aesType = byte.Parse(ExtractHeaderValue(fileContent, "AES_TYPE:"));
 
                     if (string.IsNullOrWhiteSpace(fileName))
                     {
@@ -649,7 +809,23 @@ public partial class Form1 : Form
                     }
 
                     // Decrypt the data
-                    string base64FileContent = Aes256Helper.DecryptCBC(encryptedBlocks, decryptionKey);
+                    string base64FileContent;
+                    switch (aesType)
+                    {
+                        case AES_TYPE_256:
+                            base64FileContent = AES256CBC.DecryptCBC(encryptedBlocks, decryptionKey);
+                            break;
+                        case AES_TYPE_192:
+                            base64FileContent = Aes192Helper.DecryptCBC(encryptedBlocks, decryptionKey);
+                            break;
+                        case AES_TYPE_128:
+                            base64FileContent = Aes128Helper.DecryptCBC(encryptedBlocks, decryptionKey);
+                            break;
+                        default:
+                            base64FileContent = AES256CBC.DecryptCBC(encryptedBlocks, decryptionKey);
+                            break;
+                    }
+
                     byte[] decryptedFileContent = Convert.FromBase64String(base64FileContent); // Renamed to avoid variable conflict
 
                     // Save the decrypted file
@@ -695,6 +871,7 @@ public partial class Form1 : Form
                     {
                         int totalLength = reader.ReadInt32();
                         bool isFile = reader.ReadByte() == 1;
+                        byte aesType = reader.ReadByte();
 
                         if (isFile)
                         {
@@ -703,7 +880,7 @@ public partial class Form1 : Form
                             string fileName = Encoding.UTF8.GetString(reader.ReadBytes(fileNameLength));
 
                             // Get encrypted blocks
-                            int encryptedDataLength = totalLength - (1 + 4 + fileNameLength);
+                            int encryptedDataLength = totalLength - (2 + 4 + fileNameLength);
                             int numBlocks = encryptedDataLength / 16;
                             uint[][] encryptedBlocks = new uint[numBlocks][];
 
@@ -715,7 +892,23 @@ public partial class Form1 : Form
                             }
 
                             // Decrypt data
-                            string base64Content = Aes256Helper.DecryptCBC(encryptedBlocks, decryptionKey);
+                            string base64Content;
+                            switch (aesType)
+                            {
+                                case AES_TYPE_256:
+                                    base64Content = AES256CBC.DecryptCBC(encryptedBlocks, decryptionKey);
+                                    break;
+                                case AES_TYPE_192:
+                                    base64Content = Aes192Helper.DecryptCBC(encryptedBlocks, decryptionKey);
+                                    break;
+                                case AES_TYPE_128:
+                                    base64Content = Aes128Helper.DecryptCBC(encryptedBlocks, decryptionKey);
+                                    break;
+                                default:
+                                    base64Content = AES256CBC.DecryptCBC(encryptedBlocks, decryptionKey);
+                                    break;
+                            }
+
                             byte[] fileContent = Convert.FromBase64String(base64Content);
 
                             // Save decrypted file
@@ -744,7 +937,7 @@ public partial class Form1 : Form
                         else
                         {
                             // Plain message decryption
-                            int encryptedDataLength = totalLength - 1;
+                            int encryptedDataLength = totalLength - 2;
                             int numBlocks = encryptedDataLength / 16;
                             uint[][] encryptedBlocks = new uint[numBlocks][];
 
@@ -755,7 +948,23 @@ public partial class Form1 : Form
                                 Buffer.BlockCopy(blockBytes, 0, encryptedBlocks[i], 0, 16);
                             }
 
-                            string message = Aes256Helper.DecryptCBC(encryptedBlocks, decryptionKey);
+                            string message;
+                            switch (aesType)
+                            {
+                                case AES_TYPE_256:
+                                    message = AES256CBC.DecryptCBC(encryptedBlocks, decryptionKey);
+                                    break;
+                                case AES_TYPE_192:
+                                    message = Aes192Helper.DecryptCBC(encryptedBlocks, decryptionKey);
+                                    break;
+                                case AES_TYPE_128:
+                                    message = Aes128Helper.DecryptCBC(encryptedBlocks, decryptionKey);
+                                    break;
+                                default:
+                                    message = AES256CBC.DecryptCBC(encryptedBlocks, decryptionKey);
+                                    break;
+                            }
+
                             MessageBox.Show($"Decrypted message: {message}", "Message Decrypted", MessageBoxButtons.OK, MessageBoxIcon.Information);
                         }
                     }
@@ -822,31 +1031,6 @@ public partial class Form1 : Form
                 lblSelectedFile.Text = Path.GetFileName(selectedEncryptedFilePath);
             }
         }
-    }
-
-    // Helper method to parse encryption key from hexadecimal string
-    private uint[] ParseEncryptionKey(string keyText)
-    {
-        // Remove any spaces and ensure lowercase for consistency
-        keyText = keyText.Replace(" ", "").ToLower();
-
-        // Check if it's a valid hex string
-        if (!System.Text.RegularExpressions.Regex.IsMatch(keyText, "^[0-9a-f]+$"))
-            throw new ArgumentException("Key must contain only hexadecimal characters (0-9, a-f)");
-
-        // Key must be 256 bits (32 bytes or 64 hex chars) for AES-256
-        if (keyText.Length != 64)
-            throw new ArgumentException($"Key must be exactly 64 hexadecimal characters (256 bits), got {keyText.Length}");
-
-        uint[] key = new uint[8]; // 8 uint values for a 256-bit key
-
-        for (int i = 0; i < 8; i++)
-        {
-            string chunk = keyText.Substring(i * 8, 8);
-            key[i] = Convert.ToUInt32(chunk, 16);
-        }
-
-        return key;
     }
 
     protected override void OnFormClosing(FormClosingEventArgs e)
@@ -918,6 +1102,11 @@ public partial class Form1 : Form
     {
         try
         {
+            // Skip the local host
+            string localIp = GetLocalIPAddress();
+            if (ip == localIp)
+                return;
+
             using (var client = new TcpClient())
             {
                 var connectTask = client.ConnectAsync(ip, DEFAULT_PORT);
@@ -943,27 +1132,56 @@ public partial class Form1 : Form
 
     private async Task<string> GetDeviceNameAsync(string ip)
     {
-        using (var client = new TcpClient())
+        try
         {
-            await client.ConnectAsync(ip, DEFAULT_PORT);
-            using (NetworkStream stream = client.GetStream())
+            using (var client = new TcpClient())
             {
-                // Set a read timeout to avoid hanging indefinitely
-                stream.ReadTimeout = 1000; // 1 second timeout
-
-                // Read the device name sent by the client
-                byte[] buffer = new byte[256];
-                int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
-                if (bytesRead > 0)
+                // Add connection timeout
+                var connectTask = client.ConnectAsync(ip, DEFAULT_PORT);
+                if (await Task.WhenAny(connectTask, Task.Delay(1000)) != connectTask)
                 {
-                    string deviceName = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                    throw new TimeoutException("Connection timeout");
+                }
+
+                using (NetworkStream stream = client.GetStream())
+                {
+                    // Set a read timeout to avoid hanging indefinitely
+                    stream.ReadTimeout = 1000; // 1 second timeout
+
+                    // Try to read the device name with timeout protection
+                    var readTask = ReadWithTimeoutAsync(stream);
+                    if (await Task.WhenAny(readTask, Task.Delay(1500)) != readTask)
+                    {
+                        return $"Device at {ip}"; // No response, just return the IP
+                    }
+
+                    string deviceName = await readTask;
                     return string.IsNullOrWhiteSpace(deviceName) ? $"Device at {ip}" : deviceName;
                 }
-                else
-                {
-                    return $"Device at {ip}";
-                }
             }
+        }
+        catch
+        {
+            // Any exception means we couldn't properly communicate
+            return $"Device at {ip}";
+        }
+    }
+
+    private async Task<string> ReadWithTimeoutAsync(NetworkStream stream)
+    {
+        try
+        {
+            byte[] buffer = new byte[256];
+            int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+            if (bytesRead > 0)
+            {
+                return Encoding.UTF8.GetString(buffer, 0, bytesRead);
+            }
+            return string.Empty;
+        }
+        catch
+        {
+            return string.Empty;
         }
     }
 
@@ -1101,6 +1319,40 @@ public partial class Form1 : Form
     }
 
     private void txtHost_TextChanged(object sender, EventArgs e)
+    {
+
+    }
+
+    // Add event handler for AES type radio buttons
+    private void RadioAesType_CheckedChanged(object sender, EventArgs e)
+    {
+        if (sender is RadioButton rb && rb.Checked)
+        {
+            // Update placeholder text based on selected AES type
+            if (rb == radioAes256)
+            {
+                txtEncryptionKey.PlaceholderText = "Enter 64 hex characters (256-bit key)";
+            }
+            else if (rb == radioAes192)
+            {
+                txtEncryptionKey.PlaceholderText = "Enter 48 hex characters (192-bit key)";
+            }
+            else if (rb == radioAes128)
+            {
+                txtEncryptionKey.PlaceholderText = "Enter 32 hex characters (128-bit key)";
+            }
+
+            // Clear the encryption key field when changing AES type to avoid confusion
+            txtEncryptionKey.Text = string.Empty;
+        }
+    }
+
+    private void logoPictureBox_Click(object sender, EventArgs e)
+    {
+
+    }
+
+    private void Form1_Load(object sender, EventArgs e)
     {
 
     }

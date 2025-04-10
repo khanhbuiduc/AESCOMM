@@ -10,7 +10,7 @@ partial class Form1
     /// <summary>
     ///  Clean up any resources being used.
     /// </summary>
-    /// <param name="disposing">true if managed resources should be disposed; otherwise, false.</param>
+    /// <param name="disposing">true if managed resources should be disposed; otherwise.</param>
     // protected override void Dispose(bool(disposing)
     // {
     //     if (disposing && (components != null))
@@ -36,6 +36,10 @@ partial class Form1
         lblDeviceName = new Label();
         lblInformation = new Label();
         tabPage2 = new TabPage();
+        groupBoxAesType = new GroupBox();
+        radioAes256 = new RadioButton();
+        radioAes192 = new RadioButton();
+        radioAes128 = new RadioButton();
         lblEncryptionKey = new Label();
         txtEncryptionKey = new TextBox();
         txtMessage = new TextBox();
@@ -57,6 +61,7 @@ partial class Form1
         tabPage1.SuspendLayout();
         ((System.ComponentModel.ISupportInitialize)logoPictureBox).BeginInit();
         tabPage2.SuspendLayout();
+        groupBoxAesType.SuspendLayout();
         tabPage3.SuspendLayout();
         SuspendLayout();
         // 
@@ -108,9 +113,10 @@ partial class Form1
         // 
         logoPictureBox.Anchor = AnchorStyles.None;
         logoPictureBox.ErrorImage = Properties.Resources.security_aes;
-        logoPictureBox.Location = new Point(343, 0);
+        logoPictureBox.Image = Properties.Resources.aes_logo;
+        logoPictureBox.Location = new Point(394, 63);
         logoPictureBox.Name = "logoPictureBox";
-        logoPictureBox.Size = new Size(346, 307);
+        logoPictureBox.Size = new Size(257, 198);
         logoPictureBox.SizeMode = PictureBoxSizeMode.Zoom;
         logoPictureBox.TabIndex = 0;
         logoPictureBox.TabStop = false;
@@ -153,6 +159,7 @@ partial class Form1
         // 
         // tabPage2
         // 
+        tabPage2.Controls.Add(groupBoxAesType);
         tabPage2.Controls.Add(lblEncryptionKey);
         tabPage2.Controls.Add(txtEncryptionKey);
         tabPage2.Controls.Add(txtMessage);
@@ -170,6 +177,50 @@ partial class Form1
         tabPage2.Size = new Size(692, 310);
         tabPage2.TabIndex = 1;
         tabPage2.Text = "Send";
+        // 
+        // groupBoxAesType
+        // 
+        groupBoxAesType.Controls.Add(radioAes256);
+        groupBoxAesType.Controls.Add(radioAes192);
+        groupBoxAesType.Controls.Add(radioAes128);
+        groupBoxAesType.Location = new Point(215, 10);
+        groupBoxAesType.Name = "groupBoxAesType";
+        groupBoxAesType.Size = new Size(260, 35);
+        groupBoxAesType.TabIndex = 15;
+        groupBoxAesType.TabStop = false;
+        groupBoxAesType.Text = "AES Type";
+        // 
+        // radioAes256
+        // 
+        radioAes256.AutoSize = true;
+        radioAes256.Checked = true;
+        radioAes256.Location = new Point(10, 15);
+        radioAes256.Name = "radioAes256";
+        radioAes256.Size = new Size(68, 19);
+        radioAes256.TabIndex = 0;
+        radioAes256.TabStop = true;
+        radioAes256.Text = "AES-256";
+        radioAes256.UseVisualStyleBackColor = true;
+        // 
+        // radioAes192
+        // 
+        radioAes192.AutoSize = true;
+        radioAes192.Location = new Point(88, 15);
+        radioAes192.Name = "radioAes192";
+        radioAes192.Size = new Size(68, 19);
+        radioAes192.TabIndex = 1;
+        radioAes192.Text = "AES-192";
+        radioAes192.UseVisualStyleBackColor = true;
+        // 
+        // radioAes128
+        // 
+        radioAes128.AutoSize = true;
+        radioAes128.Location = new Point(166, 15);
+        radioAes128.Name = "radioAes128";
+        radioAes128.Size = new Size(68, 19);
+        radioAes128.TabIndex = 2;
+        radioAes128.Text = "AES-128";
+        radioAes128.UseVisualStyleBackColor = true;
         // 
         // lblEncryptionKey
         // 
@@ -350,12 +401,14 @@ partial class Form1
         Controls.Add(tabControl1);
         Margin = new Padding(3, 2, 3, 2);
         Name = "Form1";
-        Text = "TCP Messenger";
+        Text = "AES Encryption";
         tabControl1.ResumeLayout(false);
         tabPage1.ResumeLayout(false);
         ((System.ComponentModel.ISupportInitialize)logoPictureBox).EndInit();
         tabPage2.ResumeLayout(false);
         tabPage2.PerformLayout();
+        groupBoxAesType.ResumeLayout(false);
+        groupBoxAesType.PerformLayout();
         tabPage3.ResumeLayout(false);
         tabPage3.PerformLayout();
         ResumeLayout(false);
@@ -385,6 +438,10 @@ partial class Form1
     private Button btnSelectEncrypted;
     private Label lblDecryptionKey;
     private TextBox txtDecryptionKey;
+    private GroupBox groupBoxAesType;
+    private RadioButton radioAes256;
+    private RadioButton radioAes192;
+    private RadioButton radioAes128;
 
     #endregion
 
