@@ -1102,6 +1102,11 @@ public partial class Form1 : Form
     {
         try
         {
+            // Skip the local host
+            string localIp = GetLocalIPAddress();
+            if (ip == localIp)
+                return;
+
             using (var client = new TcpClient())
             {
                 var connectTask = client.ConnectAsync(ip, DEFAULT_PORT);
