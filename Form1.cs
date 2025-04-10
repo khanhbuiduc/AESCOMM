@@ -1139,27 +1139,56 @@ public partial class Form1 : Form
 
     private async Task<string> GetDeviceNameAsync(string ip)
     {
-        using (var client = new TcpClient())
+        try
         {
-            await client.ConnectAsync(ip, DEFAULT_PORT);
-            using (NetworkStream stream = client.GetStream())
+            using (var client = new TcpClient())
             {
-                // Set a read timeout to avoid hanging indefinitely
-                stream.ReadTimeout = 1000; // 1 second timeout
-
-                // Read the device name sent by the client
-                byte[] buffer = new byte[256];
-                int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
-                if (bytesRead > 0)
+                // Add connection timeout
+                var connectTask = client.ConnectAsync(ip, DEFAULT_PORT);
+                if (await Task.WhenAny(connectTask, Task.Delay(1000)) != connectTask)
                 {
-                    string deviceName = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+                    throw new TimeoutException("Connection timeout");
+                }
+
+                using (NetworkStream stream = client.GetStream())
+                {
+                    // Set a read timeout to avoid hanging indefinitely
+                    stream.ReadTimeout = 1000; // 1 second timeout
+
+                    // Try to read the device name with timeout protection
+                    var readTask = ReadWithTimeoutAsync(stream);
+                    if (await Task.WhenAny(readTask, Task.Delay(1500)) != readTask)
+                    {
+                        return $"Device at {ip}"; // No response, just return the IP
+                    }
+
+                    string deviceName = await readTask;
                     return string.IsNullOrWhiteSpace(deviceName) ? $"Device at {ip}" : deviceName;
                 }
-                else
-                {
-                    return $"Device at {ip}";
-                }
             }
+        }
+        catch
+        {
+            // Any exception means we couldn't properly communicate
+            return $"Device at {ip}";
+        }
+    }
+
+    private async Task<string> ReadWithTimeoutAsync(NetworkStream stream)
+    {
+        try
+        {
+            byte[] buffer = new byte[256];
+            int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+            if (bytesRead > 0)
+            {
+                return Encoding.UTF8.GetString(buffer, 0, bytesRead);
+            }
+            return string.Empty;
+        }
+        catch
+        {
+            return string.Empty;
         }
     }
 
