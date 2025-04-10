@@ -38,19 +38,19 @@ public partial class Form1 : Form
         // Load saved name or generate a new one
         LoadSavedName();
 
-        // Load logo
-        try
-        {
-            string logoPath = Path.Combine(Application.StartupPath, "logo.png");
-            if (File.Exists(logoPath))
-            {
-                logoPictureBox.Image = Image.FromFile(logoPath);
-            }
-        }
-        catch
-        {
-            // If logo loading fails, continue without image
-        }
+        // // Load logo
+        // try
+        // {
+        //     string logoPath = Path.Combine(Application.StartupPath, "logo.png");
+        //     if (File.Exists(logoPath))
+        //     {
+        //         logoPictureBox.Image = Image.FromFile(logoPath);
+        //     }
+        // }
+        // catch
+        // {
+        //     // If logo loading fails, continue without image
+        // }
 
         // Create download directory and start listening
         downloadPath = Path.Combine(Application.StartupPath, "Downloads");
@@ -1345,5 +1345,15 @@ public partial class Form1 : Form
             // Clear the encryption key field when changing AES type to avoid confusion
             txtEncryptionKey.Text = string.Empty;
         }
+    }
+
+    private void logoPictureBox_Click(object sender, EventArgs e)
+    {
+
+    }
+
+    private void Form1_Load(object sender, EventArgs e)
+    {
+
     }
 }

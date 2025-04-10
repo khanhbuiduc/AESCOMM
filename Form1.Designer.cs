@@ -61,6 +61,7 @@ partial class Form1
         tabPage1.SuspendLayout();
         ((System.ComponentModel.ISupportInitialize)logoPictureBox).BeginInit();
         tabPage2.SuspendLayout();
+        groupBoxAesType.SuspendLayout();
         tabPage3.SuspendLayout();
         SuspendLayout();
         // 
@@ -112,9 +113,10 @@ partial class Form1
         // 
         logoPictureBox.Anchor = AnchorStyles.None;
         logoPictureBox.ErrorImage = Properties.Resources.security_aes;
-        logoPictureBox.Location = new Point(343, 0);
+        logoPictureBox.Image = Properties.Resources.aes_logo;
+        logoPictureBox.Location = new Point(394, 63);
         logoPictureBox.Name = "logoPictureBox";
-        logoPictureBox.Size = new Size(346, 307);
+        logoPictureBox.Size = new Size(257, 198);
         logoPictureBox.SizeMode = PictureBoxSizeMode.Zoom;
         logoPictureBox.TabIndex = 0;
         logoPictureBox.TabStop = false;
@@ -194,7 +196,7 @@ partial class Form1
         radioAes256.Checked = true;
         radioAes256.Location = new Point(10, 15);
         radioAes256.Name = "radioAes256";
-        radioAes256.Size = new Size(72, 19);
+        radioAes256.Size = new Size(68, 19);
         radioAes256.TabIndex = 0;
         radioAes256.TabStop = true;
         radioAes256.Text = "AES-256";
@@ -205,7 +207,7 @@ partial class Form1
         radioAes192.AutoSize = true;
         radioAes192.Location = new Point(88, 15);
         radioAes192.Name = "radioAes192";
-        radioAes192.Size = new Size(72, 19);
+        radioAes192.Size = new Size(68, 19);
         radioAes192.TabIndex = 1;
         radioAes192.Text = "AES-192";
         radioAes192.UseVisualStyleBackColor = true;
@@ -215,7 +217,7 @@ partial class Form1
         radioAes128.AutoSize = true;
         radioAes128.Location = new Point(166, 15);
         radioAes128.Name = "radioAes128";
-        radioAes128.Size = new Size(72, 19);
+        radioAes128.Size = new Size(68, 19);
         radioAes128.TabIndex = 2;
         radioAes128.Text = "AES-128";
         radioAes128.UseVisualStyleBackColor = true;
@@ -399,12 +401,14 @@ partial class Form1
         Controls.Add(tabControl1);
         Margin = new Padding(3, 2, 3, 2);
         Name = "Form1";
-        Text = "TCP Messenger";
+        Text = "AES Encryption";
         tabControl1.ResumeLayout(false);
         tabPage1.ResumeLayout(false);
         ((System.ComponentModel.ISupportInitialize)logoPictureBox).EndInit();
         tabPage2.ResumeLayout(false);
         tabPage2.PerformLayout();
+        groupBoxAesType.ResumeLayout(false);
+        groupBoxAesType.PerformLayout();
         tabPage3.ResumeLayout(false);
         tabPage3.PerformLayout();
         ResumeLayout(false);
