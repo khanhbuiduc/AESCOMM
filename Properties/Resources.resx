@@ -121,13 +121,16 @@
   <data name="history_301" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\history_301.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
+  <data name="infor_30" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\infor_30.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  </data>
   <data name="history_30" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\history_30.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
   <data name="security-aes" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\Resources\security-aes.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
-  <data name="infor_30" type="System.Resources.ResXFileRef, System.Windows.Forms">
-    <value>..\Resources\infor_30.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
+  <data name="aes-logo" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\Resources\aes-logo.png;System.Drawing.Bitmap, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a</value>
   </data>
 </root>
